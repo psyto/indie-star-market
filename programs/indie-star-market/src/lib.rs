@@ -405,13 +405,13 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    /// CHECK: Mint will be created separately
+    /// CHECK: YES mint - validated in instruction
     pub yes_mint: AccountInfo<'info>,
 
-    /// CHECK: Mint will be created separately
+    /// CHECK: NO mint - validated in instruction
     pub no_mint: AccountInfo<'info>,
 
-    /// CHECK: USDC mint address
+    /// USDC mint address
     pub usdc_mint: Account<'info, Mint>,
 
     pub token_program: Program<'info, Token>,
@@ -439,13 +439,25 @@ pub struct BuyTokens<'info> {
     #[account(mut)]
     pub user_usdc_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"yes"],
+        bump
+    )]
     pub yes_liquidity_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"no"],
+        bump
+    )]
     pub no_liquidity_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"usdc"],
+        bump
+    )]
     pub usdc_liquidity_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
@@ -471,13 +483,25 @@ pub struct SellTokens<'info> {
     #[account(mut)]
     pub user_usdc_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"yes"],
+        bump
+    )]
     pub yes_liquidity_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"no"],
+        bump
+    )]
     pub no_liquidity_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"usdc"],
+        bump
+    )]
     pub usdc_liquidity_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
@@ -514,7 +538,11 @@ pub struct RedeemTokens<'info> {
     #[account(mut)]
     pub user_usdc_account: Account<'info, TokenAccount>,
 
-    #[account(mut)]
+    #[account(
+        mut,
+        seeds = [b"liquidity", market.key().as_ref(), b"usdc"],
+        bump
+    )]
     pub usdc_liquidity_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
