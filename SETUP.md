@@ -54,10 +54,10 @@ Comprehensive error codes for:
 
 ### Immediate Actions Needed:
 
-1. **Fix IDL Generation Issue**
-   - Current issue: Anchor IDL generation failing (Rust code compiles fine)
-   - This is likely a version compatibility issue
-   - Workaround: Can deploy without IDL or update Anchor version
+1. **✅ IDL Generation Issue - FIXED**
+   - Issue was resolved by adding `anchor-spl/idl-build` to the `idl-build` feature
+   - IDL now generates successfully
+   - All instructions are properly documented in the IDL
 
 2. **Create Token Mints**
    - The `initialize` instruction expects YES/NO mints to be created separately

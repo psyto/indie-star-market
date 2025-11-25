@@ -35,7 +35,7 @@ anchor build
 cargo build-sbf
 ```
 
-**Note**: There's a known IDL generation issue with Anchor 0.32.1. The Rust code compiles successfully, so deployment will work. The IDL can be generated manually if needed.
+**Note**: IDL generation is now working correctly after adding `anchor-spl/idl-build` to the feature list.
 
 ## Deployment Steps
 

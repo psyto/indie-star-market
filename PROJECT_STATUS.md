@@ -57,9 +57,11 @@
 
 #### ✅ Test Suite
 - Comprehensive test file with multiple test cases
+- **All 5 tests passing** ✅
 - Tests for initialization, trading, and settlement
 - Edge case testing (invalid deadlines, etc.)
 - Uses Chai for assertions
+- Properly sets up all required accounts (mints, token accounts, etc.)
 
 #### ✅ Helper Scripts
 - `create-market.ts`: Creates YES/NO mints and initializes market
@@ -73,12 +75,10 @@
 
 ## 🔧 Known Issues
 
-### IDL Generation Issue
-- **Status**: Non-blocking
-- **Issue**: Anchor 0.32.1 IDL generation fails with TokenAccount types
-- **Impact**: Rust code compiles successfully, deployment works
-- **Workaround**: Can deploy without IDL, or manually generate IDL if needed
-- **Solution**: Update Anchor version or wait for fix in future release
+### ✅ IDL Generation Issue - RESOLVED
+- **Status**: Fixed
+- **Solution**: Added `anchor-spl/idl-build` to the `idl-build` feature in Cargo.toml
+- **Result**: IDL generates successfully, all instructions properly documented
 
 ## 📋 Next Steps (Phase 2 & 3)
 

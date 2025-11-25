@@ -23,27 +23,113 @@ import {
 } from "@solana/spl-token";
 
 async function createMarket() {
-  const provider = anchor.AnchorProvider.env();
+  // Set up provider
+  // For local testing: ensure solana-test-validator is running
+  // For devnet/mainnet: set ANCHOR_PROVIDER_URL and ANCHOR_WALLET env vars
+  let provider: anchor.AnchorProvider;
+  
+  try {
+    provider = anchor.AnchorProvider.env();
+  } catch (e) {
+    // Fallback to local provider if env vars not set
+    const connection = new anchor.web3.Connection(
+      process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899",
+      "confirmed"
+    );
+    
+    // Create a wallet from a keypair (for local testing)
+    const keypair = Keypair.generate();
+    const wallet = new anchor.Wallet(keypair);
+    
+    provider = new anchor.AnchorProvider(connection, wallet, {
+      commitment: "confirmed",
+    });
+    console.log("Using local provider. Make sure solana-test-validator is running!");
+    console.log("Wallet:", wallet.publicKey.toString());
+    console.log("\nTo start a local validator, run: solana-test-validator");
+    console.log("Or set ANCHOR_PROVIDER_URL and ANCHOR_WALLET for devnet/mainnet\n");
+    
+    // Airdrop SOL to wallet for local testing
+    try {
+      console.log("Requesting airdrop for local testing...");
+      const airdropSignature = await connection.requestAirdrop(
+        wallet.publicKey,
+        10 * anchor.web3.LAMPORTS_PER_SOL
+      );
+      await connection.confirmTransaction(airdropSignature, "confirmed");
+      console.log("✅ Airdrop successful!\n");
+    } catch (airdropErr: any) {
+      if (airdropErr.message?.includes("ECONNREFUSED")) {
+        console.error("❌ Cannot connect to validator. Please start solana-test-validator first.");
+        throw airdropErr;
+      }
+      console.warn("⚠️  Airdrop failed, but continuing:", airdropErr.message);
+    }
+  }
+  
   anchor.setProvider(provider);
 
   const program = anchor.workspace
     .indieStarMarket as Program<IndieStarMarket>;
 
   // Market parameters
-  const authority = provider.wallet;
+  const authority = provider.wallet as anchor.Wallet;
   const fundraisingGoal = 100000; // 100k USDC
   const deadline = Math.floor(Date.now() / 1000) + 86400 * 30; // 30 days
   const projectName = "My Indie Project";
 
-  // USDC mint (use real USDC mint on mainnet/devnet)
-  const USDC_MINT = new PublicKey(
-    "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC on mainnet
-  );
+  // Determine if we're on localnet (need to create mock USDC) or devnet/mainnet (use real USDC)
+  const isLocalnet = provider.connection.rpcEndpoint.includes("127.0.0.1") || 
+                     provider.connection.rpcEndpoint.includes("localhost");
+  
+  let usdcMint: PublicKey;
+  
+  if (isLocalnet) {
+    // For local testing, we'll create a mock USDC mint
+    console.log("Detected localnet - will create mock USDC mint");
+    usdcMint = Keypair.generate().publicKey; // Will be created below
+  } else {
+    // Use real USDC mint for devnet/mainnet
+    usdcMint = new PublicKey(
+      "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" // USDC on mainnet/devnet
+    );
+    console.log("Using real USDC mint:", usdcMint.toString());
+  }
 
-  console.log("Creating prediction market...");
+  console.log("\nCreating prediction market...");
   console.log("Project:", projectName);
   console.log("Goal:", fundraisingGoal, "USDC");
   console.log("Deadline:", new Date(deadline * 1000).toISOString());
+
+  // Step 0: Create USDC mint (if localnet)
+  let usdcMintKeypair: Keypair | null = null;
+  if (isLocalnet) {
+    console.log("\n0. Creating mock USDC token mint...");
+    usdcMintKeypair = Keypair.generate();
+    const usdcMintRent = await getMinimumBalanceForRentExemptMint(
+      provider.connection
+    );
+
+    const createUsdcMintTx = new anchor.web3.Transaction().add(
+      anchor.web3.SystemProgram.createAccount({
+        fromPubkey: authority.publicKey,
+        newAccountPubkey: usdcMintKeypair.publicKey,
+        space: MINT_SIZE,
+        lamports: usdcMintRent,
+        programId: TOKEN_PROGRAM_ID,
+      }),
+      createInitializeMintInstruction(
+        usdcMintKeypair.publicKey,
+        6, // USDC uses 6 decimals
+        authority.publicKey,
+        null
+      )
+    );
+
+    await provider.sendAndConfirm(createUsdcMintTx, [authority.payer, usdcMintKeypair]);
+    usdcMint = usdcMintKeypair.publicKey;
+    console.log("Mock USDC mint:", usdcMint.toString());
+  }
 
   // Step 1: Create YES token mint
   console.log("\n1. Creating YES token mint...");
@@ -97,15 +183,35 @@ async function createMarket() {
   await provider.sendAndConfirm(createNoMintTx, [authority.payer, noMint]);
   console.log("NO mint:", noMint.publicKey.toString());
 
-  // Step 3: Derive market PDA
+  // Step 3: Check if program is deployed
+  console.log("\n3. Checking if program is deployed...");
+  try {
+    const programInfo = await provider.connection.getAccountInfo(program.programId);
+    if (!programInfo) {
+      console.error("❌ Error: Program not deployed!");
+      console.error("\nPlease deploy the program first:");
+      console.error("  anchor deploy");
+      console.error("\nOr for local testing:");
+      console.error("  anchor build");
+      console.error("  anchor deploy --provider.cluster localnet");
+      process.exit(1);
+    }
+    console.log("✅ Program found at:", program.programId.toString());
+  } catch (err) {
+    console.error("❌ Error checking program:", err);
+    process.exit(1);
+  }
+
+  // Step 4: Initialize market (Anchor will automatically derive the market PDA)
+  console.log("\n4. Initializing market...");
+  
+  // Derive market PDA for display purposes
   const [marketPda] = PublicKey.findProgramAddressSync(
     [Buffer.from("market"), authority.publicKey.toBuffer()],
     program.programId
   );
-  console.log("\n3. Market PDA:", marketPda.toString());
-
-  // Step 4: Initialize market
-  console.log("\n4. Initializing market...");
+  console.log("Market PDA:", marketPda.toString());
+  
   try {
     const tx = await program.methods
       .initialize(
@@ -114,14 +220,10 @@ async function createMarket() {
         projectName
       )
       .accounts({
-        market: marketPda,
         authority: authority.publicKey,
         yesMint: yesMint.publicKey,
         noMint: noMint.publicKey,
-        usdcMint: USDC_MINT,
-        tokenProgram: TOKEN_PROGRAM_ID,
-        systemProgram: SystemProgram.programId,
-        rent: SYSVAR_RENT_PUBKEY,
+        usdcMint: usdcMint,
       })
       .rpc();
 
@@ -136,8 +238,25 @@ async function createMarket() {
     console.log("  YES Mint:", marketAccount.yesMint.toString());
     console.log("  NO Mint:", marketAccount.noMint.toString());
     console.log("  Settled:", marketAccount.isSettled);
-  } catch (err) {
-    console.error("Error initializing market:", err);
+  } catch (err: any) {
+    if (err.message?.includes("ECONNREFUSED")) {
+      console.error("\n❌ Error: Cannot connect to Solana cluster.");
+      console.error("Make sure solana-test-validator is running, or set ANCHOR_PROVIDER_URL for devnet/mainnet.");
+      console.error("\nTo start local validator:");
+      console.error("  solana-test-validator");
+      console.error("\nOr use devnet:");
+      console.error("  export ANCHOR_PROVIDER_URL=https://api.devnet.solana.com");
+      console.error("  export ANCHOR_WALLET=~/.config/solana/id.json");
+    } else if (err.message?.includes("program that does not exist")) {
+      console.error("\n❌ Error: Program not deployed to this cluster!");
+      console.error("\nPlease deploy the program first:");
+      console.error("  anchor deploy");
+      console.error("\nOr for local testing:");
+      console.error("  anchor build");
+      console.error("  anchor deploy --provider.cluster localnet");
+    } else {
+      console.error("Error initializing market:", err);
+    }
     throw err;
   }
 

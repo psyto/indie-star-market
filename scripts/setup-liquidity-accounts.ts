@@ -7,6 +7,7 @@ import * as anchor from "@coral-xyz/anchor";
 import { Program } from "@coral-xyz/anchor";
 import { IndieStarMarket } from "../target/types/indie_star_market";
 import {
+  Keypair,
   PublicKey,
   SystemProgram,
 } from "@solana/web3.js";
@@ -14,11 +15,46 @@ import {
   TOKEN_PROGRAM_ID,
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddress,
+  getOrCreateAssociatedTokenAccount,
   ASSOCIATED_TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
 
 async function setupLiquidityAccounts(marketPda: PublicKey) {
-  const provider = anchor.AnchorProvider.env();
+  // Set up provider
+  let provider: anchor.AnchorProvider;
+  
+  try {
+    provider = anchor.AnchorProvider.env();
+  } catch (e) {
+    const connection = new anchor.web3.Connection(
+      process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899",
+      "confirmed"
+    );
+    const keypair = Keypair.generate();
+    const wallet = new anchor.Wallet(keypair);
+    provider = new anchor.AnchorProvider(connection, wallet, {
+      commitment: "confirmed",
+    });
+    console.log("Using local provider. Make sure solana-test-validator is running!");
+    
+    // Airdrop SOL to wallet for local testing
+    try {
+      console.log("Requesting airdrop for local testing...");
+      const airdropSignature = await connection.requestAirdrop(
+        wallet.publicKey,
+        10 * anchor.web3.LAMPORTS_PER_SOL
+      );
+      await connection.confirmTransaction(airdropSignature, "confirmed");
+      console.log("✅ Airdrop successful!\n");
+    } catch (airdropErr: any) {
+      if (airdropErr.message?.includes("ECONNREFUSED")) {
+        console.error("❌ Cannot connect to validator. Please start solana-test-validator first.");
+        throw airdropErr;
+      }
+      console.warn("⚠️  Airdrop failed, but continuing:", airdropErr.message);
+    }
+  }
+  
   anchor.setProvider(provider);
 
   const program = anchor.workspace
@@ -56,71 +92,77 @@ async function setupLiquidityAccounts(marketPda: PublicKey) {
   console.log("NO Liquidity:", noLiquidityAccount.toString());
   console.log("USDC Liquidity:", usdcLiquidityAccount.toString());
 
-  // Create associated token accounts
-  const instructions = [];
-
+  // Create associated token accounts for PDAs
+  // Note: These accounts will be owned by the liquidity PDA addresses
+  console.log("\nCreating liquidity token accounts...");
+  
+  let createdCount = 0;
+  
   // Create YES liquidity account
   try {
-    const yesAta = await getAssociatedTokenAddress(
+    const yesAta = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      provider.wallet.payer as Keypair,
       yesMint,
       yesLiquidityAccount,
-      true // allowOwnerOffCurve
+      true // allowOwnerOffCurve for PDA
     );
-    instructions.push(
-      createAssociatedTokenAccountInstruction(
-        provider.wallet.publicKey,
-        yesAta,
-        yesLiquidityAccount,
-        yesMint
-      )
-    );
-  } catch (err) {
-    console.log("YES liquidity account may already exist");
+    if (yesAta.address) {
+      console.log("✅ YES liquidity account:", yesAta.address.toString());
+      createdCount++;
+    }
+  } catch (err: any) {
+    if (err.message?.includes("already in use")) {
+      console.log("✅ YES liquidity account already exists");
+    } else {
+      console.log("⚠️  YES liquidity account:", err.message);
+    }
   }
 
   // Create NO liquidity account
   try {
-    const noAta = await getAssociatedTokenAddress(
+    const noAta = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      provider.wallet.payer as Keypair,
       noMint,
       noLiquidityAccount,
       true
     );
-    instructions.push(
-      createAssociatedTokenAccountInstruction(
-        provider.wallet.publicKey,
-        noAta,
-        noLiquidityAccount,
-        noMint
-      )
-    );
-  } catch (err) {
-    console.log("NO liquidity account may already exist");
+    if (noAta.address) {
+      console.log("✅ NO liquidity account:", noAta.address.toString());
+      createdCount++;
+    }
+  } catch (err: any) {
+    if (err.message?.includes("already in use")) {
+      console.log("✅ NO liquidity account already exists");
+    } else {
+      console.log("⚠️  NO liquidity account:", err.message);
+    }
   }
 
   // Create USDC liquidity account
   try {
-    const usdcAta = await getAssociatedTokenAddress(
+    const usdcAta = await getOrCreateAssociatedTokenAccount(
+      provider.connection,
+      provider.wallet.payer as Keypair,
       usdcMint,
       usdcLiquidityAccount,
       true
     );
-    instructions.push(
-      createAssociatedTokenAccountInstruction(
-        provider.wallet.publicKey,
-        usdcAta,
-        usdcLiquidityAccount,
-        usdcMint
-      )
-    );
-  } catch (err) {
-    console.log("USDC liquidity account may already exist");
+    if (usdcAta.address) {
+      console.log("✅ USDC liquidity account:", usdcAta.address.toString());
+      createdCount++;
+    }
+  } catch (err: any) {
+    if (err.message?.includes("already in use")) {
+      console.log("✅ USDC liquidity account already exists");
+    } else {
+      console.log("⚠️  USDC liquidity account:", err.message);
+    }
   }
 
-  if (instructions.length > 0) {
-    const tx = await provider.sendAndConfirm(
-      new anchor.web3.Transaction().add(...instructions)
-    );
-    console.log("\n✅ Liquidity accounts created! Transaction:", tx);
+  if (createdCount > 0) {
+    console.log(`\n✅ Successfully created ${createdCount} liquidity account(s)!`);
   } else {
     console.log("\n✅ All liquidity accounts already exist");
   }
