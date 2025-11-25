@@ -1,10 +1,18 @@
 "use client";
 
-import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
+import dynamic from "next/dynamic";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { MarketDashboard } from "@/components/MarketDashboard";
+import { MarketAddressHelper } from "@/components/MarketAddressHelper";
 import { useState, useEffect } from "react";
 import { PublicKey } from "@solana/web3.js";
+
+// Dynamically import wallet button to avoid SSR issues
+const WalletMultiButton = dynamic(
+  async () =>
+    (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
+  { ssr: false }
+);
 
 export default function Home() {
   const { connection } = useConnection();
@@ -27,6 +35,11 @@ export default function Home() {
           <WalletMultiButton />
         </div>
 
+        {/* Market Address Helper */}
+        <MarketAddressHelper
+          onAddressFound={(address) => setMarketAddress(address)}
+        />
+
         {/* Market Address Input */}
         <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6 mb-8">
           <h2 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
@@ -37,7 +50,7 @@ export default function Home() {
               type="text"
               value={marketAddress}
               onChange={(e) => setMarketAddress(e.target.value)}
-              placeholder="Enter market PDA address..."
+              placeholder="Enter market PDA address (e.g., from yarn create-market)..."
               className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
             />
             <button
@@ -62,6 +75,16 @@ export default function Home() {
               ⚠️ Please connect your wallet to interact with markets
             </p>
           )}
+          <div className="mt-4 p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
+            <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              How to get a Market PDA:
+            </p>
+            <ol className="text-xs text-gray-600 dark:text-gray-400 list-decimal list-inside space-y-1">
+              <li>Run <code className="bg-gray-200 dark:bg-gray-600 px-1 rounded">yarn create-market</code> in the project root</li>
+              <li>Copy the "Market PDA" address from the output</li>
+              <li>Or use the helper above to derive from your wallet address</li>
+            </ol>
+          </div>
         </div>
 
         {/* Market Dashboard */}

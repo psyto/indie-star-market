@@ -555,7 +555,76 @@
         96,
         164,
         194
-      ]
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "yes_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "no_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "usdc_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "fundraising_goal",
+            "type": "u64"
+          },
+          {
+            "name": "deadline",
+            "type": "i64"
+          },
+          {
+            "name": "project_name",
+            "type": "string"
+          },
+          {
+            "name": "yes_liquidity",
+            "type": "u64"
+          },
+          {
+            "name": "no_liquidity",
+            "type": "u64"
+          },
+          {
+            "name": "usdc_liquidity",
+            "type": "u64"
+          },
+          {
+            "name": "is_settled",
+            "type": "bool"
+          },
+          {
+            "name": "winning_outcome",
+            "type": {
+              "option": {
+                "kind": "enum",
+                "variants": [
+                  {
+                    "name": "Yes"
+                  },
+                  {
+                    "name": "No"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
     }
   ],
   "errors": [
@@ -664,9 +733,15 @@
             "name": "winning_outcome",
             "type": {
               "option": {
-                "defined": {
-                  "name": "Outcome"
-                }
+                "kind": "enum",
+                "variants": [
+                  {
+                    "name": "Yes"
+                  },
+                  {
+                    "name": "No"
+                  }
+                ]
               }
             }
           },

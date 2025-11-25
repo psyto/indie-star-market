@@ -34,12 +34,41 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
     const fetchMarket = async () => {
       try {
         setLoading(true);
-        const market = await (program.account as any).marketState.fetch(marketPda);
+        // Try standard account fetch first
+        let market;
+        if ((program.account as any)?.marketState?.fetch) {
+          market = await (program.account as any).marketState.fetch(marketPda);
+        } else if ((program as any).customFetchAccount) {
+          // Fallback to custom fetch method if account clients aren't available
+          market = await (program as any).customFetchAccount("MarketState", marketPda);
+        } else {
+          // Last resort: fetch account info directly and decode manually
+          const accountInfo = await connection.getAccountInfo(marketPda);
+          if (!accountInfo) {
+            throw new Error("Market account not found");
+          }
+          const coder = (program as any).coder?.accounts;
+          if (coder) {
+            market = coder.decode("MarketState", accountInfo.data);
+          } else {
+            throw new Error("Unable to decode market account");
+          }
+        }
         setMarketState(market);
         setError(null);
       } catch (err: any) {
-        setError(err.message || "Failed to fetch market");
+        const errorMessage = err.message || "Failed to fetch market";
+        setError(errorMessage);
         console.error("Error fetching market:", err);
+        
+        // If account not found, provide helpful guidance
+        if (errorMessage.includes("not found")) {
+          console.info(
+            "💡 Tip: The market PDA was derived, but the market account hasn't been created yet.\n" +
+            "To create a market, run: yarn create-market\n" +
+            "Make sure you're connected to the correct network (devnet/localnet)."
+          );
+        }
       } finally {
         setLoading(false);
       }
@@ -65,9 +94,35 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   }
 
   if (error) {
+    const isAccountNotFound = error.includes("not found");
     return (
       <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-        <p className="text-red-800 dark:text-red-200">Error: {error}</p>
+        <div className="space-y-3">
+          <p className="text-red-800 dark:text-red-200 font-semibold">Error: {error}</p>
+          {isAccountNotFound && (
+            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-blue-900 dark:text-blue-200 font-medium mb-2">
+                💡 Market Not Created Yet
+              </p>
+              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+                This PDA address was derived, but the market account hasn't been created on-chain yet.
+              </p>
+              <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+                <p className="font-medium">To create a market:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>Open a terminal in the project root</li>
+                  <li>Run: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">yarn create-market</code></li>
+                  <li>Copy the "Market PDA" address from the output</li>
+                  <li>Paste it in the input field above</li>
+                </ol>
+                <p className="mt-3 text-xs text-blue-600 dark:text-blue-400">
+                  Note: Make sure you're connected to the correct network (devnet/localnet) 
+                  that matches where you created the market.
+                </p>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
