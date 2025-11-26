@@ -51,8 +51,15 @@ export function useProgram() {
 
       // Validate MarketState account exists in IDL
       const marketStateAccount = idl.accounts.find((acc: any) => acc.name === "MarketState");
-      if (!marketStateAccount || !marketStateAccount.type) {
-        console.error("Invalid IDL: MarketState account not found or missing type");
+      if (!marketStateAccount) {
+        console.error("Invalid IDL: MarketState account not found");
+        return null;
+      }
+
+      // Check if type definition exists (either in account.type or in types array)
+      const marketStateTypeDef = marketStateAccount.type || idl.types.find((t: any) => t.name === "MarketState");
+      if (!marketStateTypeDef) {
+        console.error("Invalid IDL: MarketState type definition not found");
         return null;
       }
 
@@ -76,28 +83,33 @@ export function useProgram() {
         accounts: [] // Remove accounts to bypass size calculation error
         // Keep instructions and types for instruction encoding
       };
-      
+
       // Verify instructions are present
       if (!idlForProgram.instructions || idlForProgram.instructions.length === 0) {
         console.error("Invalid IDL: missing instructions array");
         return null;
       }
-      
+
       // Verify Outcome type exists in types array (needed for instruction encoding)
       const outcomeType = idlForProgram.types?.find((t: any) => t.name === "Outcome");
       if (!outcomeType) {
         console.error("Invalid IDL: Outcome type not found in types array");
         return null;
       }
-      
-      const program = new Program(idlForProgram, programId, provider);
-      
+
+      // Ensure address is in IDL for Program constructor
+      if (!idlForProgram.address) {
+        idlForProgram.address = programId.toString();
+      }
+
+      const program = new Program(idlForProgram, provider);
+
       // Verify program methods are available
       if (!program.methods) {
         console.error("Program methods not initialized");
         return null;
       }
-      
+
       // Manually initialize instruction coder if it's not available
       // Anchor browser version may not initialize it when accounts array is empty
       // Also create a modified IDL for encoding where Outcome enum is replaced with u8
@@ -117,7 +129,7 @@ export function useProgram() {
           // Continue anyway - might still work
         }
       }
-      
+
       // Create a modified IDL for instruction encoding where Outcome enum is replaced with u8
       // This is needed because Anchor browser version can't encode enums in instruction arguments
       try {
@@ -135,19 +147,19 @@ export function useProgram() {
       } catch (encodingIdlError) {
         console.warn("Failed to create encoding IDL:", encodingIdlError);
       }
-      
+
       // Attach the encoding coder and original IDL to the program for use in TradingPanel
       if (instructionCoderForEncoding) {
         (program as any)._encodingCoder = instructionCoderForEncoding;
       }
       // Attach original IDL so components can access instruction discriminators
       (program as any)._idl = idl;
-      
+
       // Log available methods for debugging
       console.log("Program initialized. Available methods:", Object.keys(program.methods || {}));
       console.log("Outcome type:", outcomeType);
       console.log("Instruction coder:", (program as any).coder?.instructions ? "available" : "unavailable");
-      
+
       // Manually create account client for MarketState to enable account fetching
       // Anchor browser version doesn't support enums in account coders
       // Solution: Create a minimal IDL for decoding with enum replaced by u8
@@ -157,20 +169,29 @@ export function useProgram() {
           // Create a minimal IDL for decoding - only include MarketState account and type
           // Replace the enum in option with u8 (enums encode as u8 discriminator)
           const marketStateType = JSON.parse(JSON.stringify(
-            idl.types.find((t: any) => t.name === "MarketState")
+            marketStateTypeDef
           ));
-          
+
           // Replace enum in option with u8
           if (marketStateType && marketStateType.type?.fields) {
             const winningOutcomeField = marketStateType.type.fields.find(
               (f: any) => f.name === "winning_outcome"
             );
-            if (winningOutcomeField && winningOutcomeField.type?.option?.kind === "enum") {
-              winningOutcomeField.type = { option: "u8" };
+
+            // Handle both inline enum and defined type reference
+            if (winningOutcomeField) {
+              const isInlineEnum = winningOutcomeField.type?.option?.kind === "enum";
+              const isDefinedOutcome = winningOutcomeField.type?.option?.defined?.name === "Outcome";
+
+              if (isInlineEnum || isDefinedOutcome) {
+                winningOutcomeField.type = { option: "u8" };
+              }
             }
           }
-          
+
           const minimalIdlForDecoding = {
+            address: idl.address || "11111111111111111111111111111111",
+            metadata: idl.metadata || { name: "indie_star_market", version: "0.1.0" },
             version: idl.metadata?.version || "0.1.0",
             name: idl.metadata?.name || "indie_star_market",
             instructions: [],
@@ -179,17 +200,17 @@ export function useProgram() {
             errors: [],
             events: []
           };
-          
+
           // Create account coder from the minimal IDL
           const accountCoder = new BorshAccountsCoder(minimalIdlForDecoding);
-          
+
           // Create a custom account fetch method
           (program.account as any).marketState = {
             fetch: async (address: PublicKey) => {
               const accountInfo = await connection.getAccountInfo(address);
               if (!accountInfo) {
-                const networkName = connection.rpcEndpoint.includes('devnet') ? 'devnet' : 
-                                   connection.rpcEndpoint.includes('mainnet') ? 'mainnet' : 'localnet';
+                const networkName = connection.rpcEndpoint.includes('devnet') ? 'devnet' :
+                  connection.rpcEndpoint.includes('mainnet') ? 'mainnet' : 'localnet';
                 throw new Error(
                   `Market account not found at ${address.toString()}.\n` +
                   `This PDA was derived, but the market hasn't been created yet.\n` +
@@ -200,7 +221,7 @@ export function useProgram() {
               // Use the account coder to decode
               try {
                 const decoded = accountCoder.decode("MarketState", accountInfo.data);
-                
+
                 // Convert snake_case to camelCase and ensure BN objects are present
                 // Anchor's decoder returns snake_case, but components expect camelCase
                 const convertToBN = (value: any): BN => {
@@ -209,7 +230,7 @@ export function useProgram() {
                   if (typeof value === 'object' && 'toNumber' in value) return value as BN;
                   return new BN(value.toString());
                 };
-                
+
                 const converted: any = {
                   authority: decoded.authority ? new PublicKey(decoded.authority) : decoded.authority,
                   yesMint: decoded.yes_mint ? new PublicKey(decoded.yes_mint) : decoded.yes_mint,
@@ -225,7 +246,7 @@ export function useProgram() {
                   winningOutcome: decoded.winning_outcome,
                   bump: decoded.bump || 0,
                 };
-                
+
                 return converted;
               } catch (decodeError) {
                 console.error("Failed to decode MarketState:", decodeError);
@@ -241,7 +262,7 @@ export function useProgram() {
           };
         }
       }
-      
+
       return program;
     } catch (error) {
       console.error("Failed to initialize program:", error);

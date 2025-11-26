@@ -26,6 +26,7 @@ export function TradingPanel({
   program,
 }: TradingPanelProps) {
   const { publicKey, signTransaction } = useWallet();
+  const { connection } = useConnection();
   const [action, setAction] = useState<"buy" | "sell">("buy");
   const [outcome, setOutcome] = useState<"yes" | "no">("yes");
   const [amount, setAmount] = useState("");
