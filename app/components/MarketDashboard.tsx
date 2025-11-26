@@ -31,9 +31,15 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   useEffect(() => {
     if (!program || !marketPda) return;
 
-    const fetchMarket = async () => {
+    let intervalId: NodeJS.Timeout | null = null;
+    let isInitialLoad = true;
+
+    const fetchMarket = async (showLoading = false) => {
       try {
-        setLoading(true);
+        if (showLoading) {
+          setLoading(true);
+        }
+        
         // Try standard account fetch first
         let market;
         if ((program.account as any)?.marketState?.fetch) {
@@ -54,11 +60,36 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
             throw new Error("Unable to decode market account");
           }
         }
+        
         setMarketState(market);
         setError(null);
+        setLoading(false);
+        
+        // Start polling only after successful initial fetch
+        if (isInitialLoad && !intervalId) {
+          isInitialLoad = false;
+          // Poll every 15 seconds (less frequent to avoid annoying refreshes)
+          intervalId = setInterval(() => {
+            fetchMarket(false).catch(() => {
+              // Stop polling on error
+              if (intervalId) {
+                clearInterval(intervalId);
+                intervalId = null;
+              }
+            });
+          }, 15000);
+        }
       } catch (err: any) {
         const errorMessage = err.message || "Failed to fetch market";
         setError(errorMessage);
+        setLoading(false);
+        
+        // Stop polling on error
+        if (intervalId) {
+          clearInterval(intervalId);
+          intervalId = null;
+        }
+        
         console.error("Error fetching market:", err);
         
         // If account not found, provide helpful guidance
@@ -69,18 +100,18 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
             "Make sure you're connected to the correct network (devnet/localnet)."
           );
         }
-      } finally {
-        setLoading(false);
       }
     };
 
-    fetchMarket();
+    // Initial fetch with loading indicator
+    fetchMarket(true);
 
-    // Set up polling for real-time updates
-    const interval = setInterval(fetchMarket, 5000); // Poll every 5 seconds
-
-    return () => clearInterval(interval);
-  }, [program, marketPda]);
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [program, marketPda, connection]);
 
   if (loading) {
     return (

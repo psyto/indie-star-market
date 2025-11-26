@@ -1,10 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { PublicKey } from "@solana/web3.js";
-import { Program } from "@coral-xyz/anchor";
-import { BN } from "@coral-xyz/anchor";
-import { useWallet } from "@solana/wallet-adapter-react";
+import { PublicKey, Transaction } from "@solana/web3.js";
+import { Program, BN } from "@coral-xyz/anchor";
+import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import {
   getAssociatedTokenAddress,
   getOrCreateAssociatedTokenAccount,
@@ -88,7 +87,10 @@ export function TradingPanel({
 
         setStatus("Sending transaction...");
 
+        // Outcome enum format for Anchor
+        // Anchor expects enum variants as objects with the variant name as key
         const outcomeEnum = outcome === "yes" ? { yes: {} } : { no: {} };
+        
         const accounts = {
           market: marketPda,
           user: publicKey,
@@ -102,12 +104,143 @@ export function TradingPanel({
           tokenProgram: TOKEN_PROGRAM_ID,
         };
 
-        const tx = await (program.methods as any)
-          .buyTokens(amountBN, outcomeEnum)
-          .accounts(accounts)
-          .rpc();
+        // Verify program methods are available
+        if (!program.methods) {
+          throw new Error("Program methods not available. Program may not be initialized correctly.");
+        }
 
-        setStatus(`✅ Success! Transaction: ${tx}`);
+        // Anchor converts snake_case instruction names to camelCase
+        // So buy_tokens becomes buyTokens
+        const methodName = "buyTokens";
+        if (!(program.methods as any)[methodName]) {
+          // Try snake_case as fallback
+          const snakeCaseMethod = "buy_tokens";
+          if ((program.methods as any)[snakeCaseMethod]) {
+            console.warn(`Using snake_case method name: ${snakeCaseMethod}`);
+            const tx = await (program.methods as any)[snakeCaseMethod](amountBN, outcomeEnum)
+              .accounts(accounts)
+              .rpc();
+            setStatus(`✅ Success! Transaction: ${tx}`);
+            setAmount("");
+            return;
+          }
+          throw new Error(`${methodName} method not found. Available methods: ${Object.keys(program.methods || {}).join(", ")}`);
+        }
+
+        console.log("Calling buyTokens with:", { amountBN: amountBN.toString(), outcomeEnum, accounts });
+        console.log("Program methods available:", Object.keys(program.methods || {}));
+        console.log("Program coder:", (program as any).coder);
+        console.log("Instruction coder:", (program as any).coder?.instructions);
+
+        try {
+          // Try normal method first
+          const tx = await (program.methods as any)[methodName](amountBN, outcomeEnum)
+            .accounts(accounts)
+            .rpc();
+          
+          setStatus(`✅ Success! Transaction: ${tx}`);
+          setAmount("");
+        } catch (encodeError: any) {
+          console.error("Encoding error details:", encodeError);
+          console.error("Error stack:", encodeError.stack);
+          
+          // If enum encoding fails, try manual encoding with u8 enum replacement
+          if (encodeError.message?.includes("encode") || encodeError.message?.includes("undefined")) {
+            console.log("Attempting manual instruction encoding with u8 enum...");
+            
+            try {
+              // Use encoding coder if available (with u8 enum replacement)
+              const encodingCoder = (program as any)._encodingCoder;
+              if (!encodingCoder) {
+                throw new Error("Encoding coder not available");
+              }
+              
+              // Encode enum as u8: 0 for Yes, 1 for No
+              const outcomeU8 = outcome === "yes" ? 0 : 1;
+              
+              // Get discriminator from original IDL (attached to program)
+              const originalIdl = (program as any)._idl;
+              if (!originalIdl || !originalIdl.instructions) {
+                throw new Error("Original IDL not available on program");
+              }
+              
+              const buyTokensIx = originalIdl.instructions.find((ix: any) => ix.name === "buy_tokens");
+              if (!buyTokensIx || !buyTokensIx.discriminator) {
+                throw new Error("Could not find buy_tokens instruction discriminator in IDL");
+              }
+              
+              // Manually encode instruction arguments
+              // Manual encoding: discriminator + args
+              const discriminator = Buffer.from(buyTokensIx.discriminator);
+              
+              // Encode args manually
+              // amount_usdc: u64 (8 bytes, little-endian)
+              // outcome: u8 (1 byte)
+              const amountBuffer = Buffer.allocUnsafe(8);
+              amountBuffer.writeBigUInt64LE(BigInt(amountBN.toString()), 0);
+              
+              const argsBuffer = Buffer.concat([
+                amountBuffer,
+                Buffer.from([outcomeU8])
+              ]);
+              
+              const instructionData = Buffer.concat([discriminator, argsBuffer]);
+              
+              console.log("Encoded instruction data length:", instructionData.length);
+              console.log("Discriminator:", Array.from(discriminator));
+              console.log("Args:", { amount_usdc: amountBN.toString(), outcome: outcomeU8 });
+              
+              // Build transaction manually
+              const transaction = new Transaction();
+              
+              // Add instruction with manually encoded data
+              transaction.add({
+                keys: [
+                  { pubkey: accounts.market, isSigner: false, isWritable: true },
+                  { pubkey: accounts.user, isSigner: true, isWritable: true },
+                  { pubkey: accounts.yesMint, isSigner: false, isWritable: false },
+                  { pubkey: accounts.noMint, isSigner: false, isWritable: false },
+                  { pubkey: accounts.userTokenAccount, isSigner: false, isWritable: true },
+                  { pubkey: accounts.userUsdcAccount, isSigner: false, isWritable: true },
+                  { pubkey: accounts.yesLiquidityAccount, isSigner: false, isWritable: true },
+                  { pubkey: accounts.noLiquidityAccount, isSigner: false, isWritable: true },
+                  { pubkey: accounts.usdcLiquidityAccount, isSigner: false, isWritable: true },
+                  { pubkey: accounts.tokenProgram, isSigner: false, isWritable: false },
+                ],
+                programId: program.programId,
+                data: instructionData,
+              });
+              
+              // Get recent blockhash
+              const { blockhash } = await connection.getLatestBlockhash();
+              transaction.recentBlockhash = blockhash;
+              transaction.feePayer = publicKey;
+              
+              // Sign and send transaction using wallet adapter
+              if (!signTransaction) {
+                throw new Error("Wallet signTransaction not available");
+              }
+              
+              const signedTx = await signTransaction(transaction);
+              const signature = await connection.sendRawTransaction(signedTx.serialize());
+              
+              // Wait for confirmation
+              await connection.confirmTransaction(signature, "confirmed");
+              
+              setStatus(`✅ Success! Transaction: ${signature}`);
+              setAmount("");
+            } catch (manualError: any) {
+              console.error("Manual encoding also failed:", manualError);
+              throw new Error(
+                `Failed to encode instruction arguments. ` +
+                `Tried both normal and manual encoding. ` +
+                `Error: ${encodeError.message}`
+              );
+            }
+          } else {
+            throw encodeError;
+          }
+        }
       } else {
         // Sell logic would go here
         setStatus("Sell functionality coming soon...");
