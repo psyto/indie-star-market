@@ -94,3 +94,5 @@ app/
 - Ensure you have USDC tokens for buying
 - Check that liquidity accounts exist for the market
 
+
+

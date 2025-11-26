@@ -116,3 +116,5 @@ NEXT_PUBLIC_SOLANA_RPC_URL=http://127.0.0.1:8899
 - No transaction history yet
 - No market discovery/list page
 
+
+

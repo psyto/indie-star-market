@@ -281,3 +281,5 @@ npm run dev
 
 **You're ready to start Phase 2!** The backend is solid, tested, and ready. Now it's time to build a beautiful frontend that makes prediction markets accessible to everyone. 🚀
 
+
+

@@ -26,3 +26,5 @@ If you still see hydration errors, try:
 1. Clear `.next` directory: `rm -rf .next`
 2. Restart dev server: `npm run dev`
 
+
+
