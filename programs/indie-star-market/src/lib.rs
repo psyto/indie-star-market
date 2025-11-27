@@ -115,7 +115,7 @@ pub mod indie_star_market {
 
         // Mint tokens to user
         let seeds = &[
-            b"market",
+            b"market_v2",
             authority.as_ref(),
             &[bump],
         ];
@@ -224,7 +224,7 @@ pub mod indie_star_market {
 
         // Burn tokens from user
         let seeds = &[
-            b"market",
+            b"market_v2",
             authority.as_ref(),
             &[bump],
         ];
@@ -356,7 +356,7 @@ pub mod indie_star_market {
 
         // Burn winning tokens
         let seeds = &[
-            b"market",
+            b"market_v2",
             authority.as_ref(),
             &[bump],
         ];
@@ -397,7 +397,7 @@ pub struct Initialize<'info> {
         init,
         payer = authority,
         space = 8 + MarketState::LEN,
-        seeds = [b"market", authority.key().as_ref()],
+        seeds = [b"market_v2", authority.key().as_ref()],
         bump
     )]
     pub market: Account<'info, MarketState>,

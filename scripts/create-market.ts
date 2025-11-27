@@ -20,6 +20,8 @@ import {
   createAssociatedTokenAccountInstruction,
   getAssociatedTokenAddress,
   ASSOCIATED_TOKEN_PROGRAM_ID,
+  createSetAuthorityInstruction,
+  AuthorityType,
 } from "@solana/spl-token";
 
 async function createMarket() {
@@ -27,7 +29,7 @@ async function createMarket() {
   // For local testing: ensure solana-test-validator is running
   // For devnet/mainnet: set ANCHOR_PROVIDER_URL and ANCHOR_WALLET env vars
   let provider: anchor.AnchorProvider;
-  
+
   try {
     provider = anchor.AnchorProvider.env();
   } catch (e) {
@@ -36,11 +38,22 @@ async function createMarket() {
       process.env.ANCHOR_PROVIDER_URL || "http://127.0.0.1:8899",
       "confirmed"
     );
-    
-    // Create a wallet from a keypair (for local testing)
-    const keypair = Keypair.generate();
-    const wallet = new anchor.Wallet(keypair);
-    
+
+    // Try to load local wallet from default path
+    let wallet: anchor.Wallet;
+    try {
+      const fs = require("fs");
+      const os = require("os");
+      const keypairData = JSON.parse(fs.readFileSync(os.homedir() + "/.config/solana/id.json", "utf-8"));
+      const keypair = Keypair.fromSecretKey(Buffer.from(keypairData));
+      wallet = new anchor.Wallet(keypair);
+      console.log("Loaded local wallet from ~/.config/solana/id.json");
+    } catch (err) {
+      console.log("Could not load local wallet, generating a new one...");
+      const keypair = Keypair.generate();
+      wallet = new anchor.Wallet(keypair);
+    }
+
     provider = new anchor.AnchorProvider(connection, wallet, {
       commitment: "confirmed",
     });
@@ -48,7 +61,7 @@ async function createMarket() {
     console.log("Wallet:", wallet.publicKey.toString());
     console.log("\nTo start a local validator, run: solana-test-validator");
     console.log("Or set ANCHOR_PROVIDER_URL and ANCHOR_WALLET for devnet/mainnet\n");
-    
+
     // Airdrop SOL to wallet for local testing
     try {
       console.log("Requesting airdrop for local testing...");
@@ -66,7 +79,7 @@ async function createMarket() {
       console.warn("⚠️  Airdrop failed, but continuing:", airdropErr.message);
     }
   }
-  
+
   anchor.setProvider(provider);
 
   const program = anchor.workspace
@@ -79,11 +92,11 @@ async function createMarket() {
   const projectName = "My Indie Project";
 
   // Determine if we're on localnet (need to create mock USDC) or devnet/mainnet (use real USDC)
-  const isLocalnet = provider.connection.rpcEndpoint.includes("127.0.0.1") || 
-                     provider.connection.rpcEndpoint.includes("localhost");
-  
+  const isLocalnet = provider.connection.rpcEndpoint.includes("127.0.0.1") ||
+    provider.connection.rpcEndpoint.includes("localhost");
+
   let usdcMint: PublicKey;
-  
+
   if (isLocalnet) {
     // For local testing, we'll create a mock USDC mint
     console.log("Detected localnet - will create mock USDC mint");
@@ -204,14 +217,14 @@ async function createMarket() {
 
   // Step 4: Initialize market (Anchor will automatically derive the market PDA)
   console.log("\n4. Initializing market...");
-  
+
   // Derive market PDA for display purposes
   const [marketPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("market"), authority.publicKey.toBuffer()],
+    [Buffer.from("market_v2"), authority.publicKey.toBuffer()],
     program.programId
   );
   console.log("Market PDA:", marketPda.toString());
-  
+
   try {
     const tx = await program.methods
       .initialize(
@@ -228,6 +241,31 @@ async function createMarket() {
       .rpc();
 
     console.log("Market initialized! Transaction:", tx);
+
+    // Transfer mint authority to Market PDA
+    console.log("\nTransferring mint authority to Market PDA...");
+
+    const transferYesAuthTx = new anchor.web3.Transaction().add(
+      createSetAuthorityInstruction(
+        yesMint.publicKey,
+        authority.publicKey,
+        AuthorityType.MintTokens,
+        marketPda
+      )
+    );
+    await provider.sendAndConfirm(transferYesAuthTx, [authority.payer]);
+    console.log("Transferred YES mint authority");
+
+    const transferNoAuthTx = new anchor.web3.Transaction().add(
+      createSetAuthorityInstruction(
+        noMint.publicKey,
+        authority.publicKey,
+        AuthorityType.MintTokens,
+        marketPda
+      )
+    );
+    await provider.sendAndConfirm(transferNoAuthTx, [authority.payer]);
+    console.log("Transferred NO mint authority");
 
     // Fetch market state
     const marketAccount = await program.account.marketState.fetch(marketPda);
