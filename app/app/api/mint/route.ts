@@ -33,7 +33,28 @@ export async function POST(request: Request) {
         const keypairPath = path.join(os.homedir(), ".config", "solana", "id.json");
         const keypairData = JSON.parse(fs.readFileSync(keypairPath, "utf-8"));
         const walletKeypair = Keypair.fromSecretKey(Buffer.from(keypairData));
-        const wallet = new anchor.Wallet(walletKeypair);
+        // Local Wallet implementation to avoid import issues with @coral-xyz/anchor in Next.js server
+        class NodeWallet {
+            constructor(readonly payer: Keypair) { }
+
+            async signTransaction(tx: any) {
+                tx.partialSign(this.payer);
+                return tx;
+            }
+
+            async signAllTransactions(txs: any[]) {
+                return txs.map((t) => {
+                    t.partialSign(this.payer);
+                    return t;
+                });
+            }
+
+            get publicKey() {
+                return this.payer.publicKey;
+            }
+        }
+
+        const wallet = new NodeWallet(walletKeypair);
 
         const provider = new anchor.AnchorProvider(connection, wallet, {
             commitment: "confirmed",

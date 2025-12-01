@@ -392,12 +392,13 @@ pub mod indie_star_market {
 }
 
 #[derive(Accounts)]
+#[instruction(fundraising_goal: u64, deadline: i64, project_name: String)]
 pub struct Initialize<'info> {
     #[account(
         init,
         payer = authority,
         space = 8 + MarketState::LEN,
-        seeds = [b"market_v2", authority.key().as_ref()],
+        seeds = [b"market_v2", authority.key().as_ref(), project_name.as_bytes()],
         bump
     )]
     pub market: Account<'info, MarketState>,
@@ -405,14 +406,39 @@ pub struct Initialize<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
 
-    /// CHECK: YES mint - validated in instruction
-    pub yes_mint: AccountInfo<'info>,
-
-    /// CHECK: NO mint - validated in instruction
-    pub no_mint: AccountInfo<'info>,
-
-    /// USDC mint address
+    pub yes_mint: Account<'info, Mint>,
+    pub no_mint: Account<'info, Mint>,
     pub usdc_mint: Account<'info, Mint>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [b"liquidity", market.key().as_ref(), b"yes"],
+        bump,
+        token::mint = yes_mint,
+        token::authority = market,
+    )]
+    pub yes_liquidity_account: Account<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [b"liquidity", market.key().as_ref(), b"no"],
+        bump,
+        token::mint = no_mint,
+        token::authority = market,
+    )]
+    pub no_liquidity_account: Account<'info, TokenAccount>,
+
+    #[account(
+        init,
+        payer = authority,
+        seeds = [b"liquidity", market.key().as_ref(), b"usdc"],
+        bump,
+        token::mint = usdc_mint,
+        token::authority = market,
+    )]
+    pub usdc_liquidity_account: Account<'info, TokenAccount>,
 
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,

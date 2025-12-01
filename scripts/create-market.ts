@@ -89,7 +89,7 @@ async function createMarket() {
   const authority = provider.wallet as anchor.Wallet;
   const fundraisingGoal = 100000; // 100k USDC
   const deadline = Math.floor(Date.now() / 1000) + 86400 * 30; // 30 days
-  const projectName = "My Indie Project";
+  const projectName = `Indie Project ${Date.now()}`; // Unique name to ensure fresh PDA
 
   // Determine if we're on localnet (need to create mock USDC) or devnet/mainnet (use real USDC)
   const isLocalnet = provider.connection.rpcEndpoint.includes("127.0.0.1") ||
@@ -218,9 +218,13 @@ async function createMarket() {
   // Step 4: Initialize market (Anchor will automatically derive the market PDA)
   console.log("\n4. Initializing market...");
 
-  // Derive market PDA for display purposes
+  // Derive market PDA for display  // Derive Market PDA
   const [marketPda] = PublicKey.findProgramAddressSync(
-    [Buffer.from("market_v2"), authority.publicKey.toBuffer()],
+    [
+      Buffer.from("market_v2"),
+      authority.publicKey.toBuffer(),
+      Buffer.from(projectName),
+    ],
     program.programId
   );
   console.log("Market PDA:", marketPda.toString());
@@ -237,7 +241,19 @@ async function createMarket() {
         yesMint: yesMint.publicKey,
         noMint: noMint.publicKey,
         usdcMint: usdcMint,
-      })
+        yesLiquidityAccount: PublicKey.findProgramAddressSync(
+          [Buffer.from("liquidity"), marketPda.toBuffer(), Buffer.from("yes")],
+          program.programId
+        )[0],
+        noLiquidityAccount: PublicKey.findProgramAddressSync(
+          [Buffer.from("liquidity"), marketPda.toBuffer(), Buffer.from("no")],
+          program.programId
+        )[0],
+        usdcLiquidityAccount: PublicKey.findProgramAddressSync(
+          [Buffer.from("liquidity"), marketPda.toBuffer(), Buffer.from("usdc")],
+          program.programId
+        )[0],
+      } as any)
       .rpc();
 
     console.log("Market initialized! Transaction:", tx);

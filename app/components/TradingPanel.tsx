@@ -496,41 +496,77 @@ export function TradingPanel({
         <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
           Testing on Localnet? Need funds?
         </p>
-        <button
-          onClick={async () => {
-            if (!publicKey) {
-              setStatus("Please connect wallet first");
-              return;
-            }
-            try {
-              setLoading(true);
-              setStatus("Minting 1000 USDC...");
-              const res = await fetch("/api/mint", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  marketPda: marketPda.toString(),
-                  recipient: publicKey.toString(),
-                }),
-              });
-              const data = await res.json();
-              if (data.success) {
-                setStatus(`✅ Minted 1000 USDC! Tx: ${data.signature}`);
-              } else {
-                throw new Error(data.error);
+        <div className="flex gap-2">
+          <button
+            onClick={async () => {
+              if (!publicKey) {
+                setStatus("Please connect wallet first");
+                return;
               }
-            } catch (e: any) {
-              console.error(e);
-              setStatus(`❌ Mint failed: ${e.message}`);
-            } finally {
-              setLoading(false);
-            }
-          }}
-          disabled={loading || !publicKey}
-          className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
-        >
-          💸 Mint 1,000 Demo USDC
-        </button>
+              try {
+                setLoading(true);
+                setStatus("Airdropping 1 SOL...");
+                const res = await fetch("/api/airdrop", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    recipient: publicKey.toString(),
+                  }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                  setStatus(`✅ Airdropped 1 SOL! Tx: ${data.signature}`);
+                } else {
+                  throw new Error(data.error);
+                }
+              } catch (e: any) {
+                console.error(e);
+                setStatus(`❌ Airdrop failed: ${e.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading || !publicKey}
+            className="flex-1 py-2 px-4 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium transition-colors border border-blue-300 dark:border-blue-800"
+          >
+            💧 Airdrop 1 SOL
+          </button>
+          <button
+            onClick={async () => {
+              if (!publicKey) {
+                setStatus("Please connect wallet first");
+                return;
+              }
+              try {
+                setLoading(true);
+                setStatus("Minting 1000 USDC...");
+                const res = await fetch("/api/mint", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({
+                    marketPda: marketPda.toString(),
+                    recipient: publicKey.toString(),
+                  }),
+                });
+                const data = await res.json();
+                if (data.success) {
+                  setStatus(`✅ Minted 1000 USDC! Tx: ${data.signature}`);
+                } else {
+                  throw new Error(data.error);
+                }
+              } catch (e: any) {
+                console.error(e);
+                setStatus(`❌ Mint failed: ${e.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }}
+            disabled={loading || !publicKey}
+            className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
+          >
+            💸 Mint 1k USDC
+          </button>
+        </div>
       </div>
 
     </div>
