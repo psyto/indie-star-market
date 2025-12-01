@@ -146,6 +146,9 @@ export function TradingPanel({
           tokenProgram: TOKEN_PROGRAM_ID,
         };
 
+        console.log("Transaction Accounts:", Object.entries(accounts).map(([k, v]) => [k, v.toString()]));
+
+
         // Instead of calling .rpc() directly which sends a separate transaction,
         // we want to add the instruction to our transaction object if we added an ATA creation ix.
         // However, Anchor's methods().instruction() returns a TransactionInstruction.
@@ -487,6 +490,49 @@ export function TradingPanel({
           {status}
         </p>
       )}
+
+      {/* Demo Mint Button */}
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
+          Testing on Localnet? Need funds?
+        </p>
+        <button
+          onClick={async () => {
+            if (!publicKey) {
+              setStatus("Please connect wallet first");
+              return;
+            }
+            try {
+              setLoading(true);
+              setStatus("Minting 1000 USDC...");
+              const res = await fetch("/api/mint", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  marketPda: marketPda.toString(),
+                  recipient: publicKey.toString(),
+                }),
+              });
+              const data = await res.json();
+              if (data.success) {
+                setStatus(`✅ Minted 1000 USDC! Tx: ${data.signature}`);
+              } else {
+                throw new Error(data.error);
+              }
+            } catch (e: any) {
+              console.error(e);
+              setStatus(`❌ Mint failed: ${e.message}`);
+            } finally {
+              setLoading(false);
+            }
+          }}
+          disabled={loading || !publicKey}
+          className="w-full py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
+        >
+          💸 Mint 1,000 Demo USDC
+        </button>
+      </div>
+
     </div>
   );
 }
