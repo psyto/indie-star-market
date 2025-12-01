@@ -329,9 +329,20 @@ export function TradingPanelEnhanced({
       setStatus(`✅ Success! Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`);
       setAmount("");
 
-      // Trigger refresh
+      // Trigger refresh with multiple attempts to account for RPC lag
       if (onTransactionComplete) {
-        setTimeout(() => onTransactionComplete(), 1000);
+        console.log("🔄 Triggering portfolio refresh...");
+        // Immediate refresh
+        onTransactionComplete();
+        // Follow-up refreshes to catch RPC updates
+        setTimeout(() => {
+          console.log("✅ Refresh attempt 2");
+          onTransactionComplete();
+        }, 2000);
+        setTimeout(() => {
+          console.log("✅ Refresh attempt 3");
+          onTransactionComplete();
+        }, 4000);
       }
     } catch (err: any) {
       console.error("Trading error:", err);

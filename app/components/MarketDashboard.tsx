@@ -7,6 +7,7 @@ import { useProgram } from "@/lib/program";
 import { TradingPanelEnhanced } from "./TradingPanelEnhanced";
 import { MarketStats } from "./MarketStats";
 import { UserPortfolio } from "./UserPortfolio";
+import { getAccount } from "@solana/spl-token";
 
 interface MarketDashboardProps {
   marketAddress: string;
@@ -19,6 +20,8 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   const [marketState, setMarketState] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [portfolioRefresh, setPortfolioRefresh] = useState(0);
+  const [actualUsdcLiquidity, setActualUsdcLiquidity] = useState<number | null>(null);
 
   const marketPda = useMemo(() => {
     try {
@@ -95,6 +98,45 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
       clearInterval(intervalId);
     };
   }, [program, marketPda, connection]);
+
+  // Check actual USDC liquidity account balance
+  useEffect(() => {
+    const checkLiquidityAccount = async () => {
+      if (!program || !marketPda || !marketState) return;
+      
+      try {
+        // Derive USDC liquidity account PDA
+        const [usdcLiquidityAccount] = PublicKey.findProgramAddressSync(
+          [Buffer.from("liquidity"), marketPda.toBuffer(), Buffer.from("usdc")],
+          program.programId
+        );
+        
+        // Get actual balance from liquidity account
+        const liquidityAccount = await getAccount(connection, usdcLiquidityAccount);
+        const actualRawAmount = liquidityAccount.amount;
+        const actualRawNumber = typeof actualRawAmount === 'bigint' 
+          ? Number(actualRawAmount) 
+          : Number(actualRawAmount);
+        
+        setActualUsdcLiquidity(actualRawNumber);
+        
+        console.log("🔍 USDC Liquidity Comparison:", {
+          marketState_usdcLiquidity: marketState.usdcLiquidity.toString(),
+          marketState_usdcLiquidity_number: marketState.usdcLiquidity.toNumber(),
+          actualLiquidityAccount_rawAmount: actualRawAmount.toString(),
+          actualLiquidityAccount_number: actualRawNumber,
+          liquidityAccountAddress: usdcLiquidityAccount.toString(),
+        });
+      } catch (err) {
+        console.error("Error checking liquidity account:", err);
+        setActualUsdcLiquidity(null);
+      }
+    };
+    
+    if (marketState) {
+      checkLiquidityAccount();
+    }
+  }, [marketState, program, marketPda, connection]);
 
   if (loading) {
     return (
@@ -201,16 +243,52 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
         </div>
       </div>
 
+      {/* Debug: Log USDC liquidity value */}
+      {console.log("🔍 Market Statistics USDC Liquidity:", {
+        rawBN: marketState.usdcLiquidity.toString(),
+        rawNumber: marketState.usdcLiquidity.toNumber(),
+        formatted: marketState.usdcLiquidity.toNumber().toLocaleString(),
+      })}
+
       {/* Market Stats */}
       <MarketStats
         yesLiquidity={yesLiquidity}
         noLiquidity={noLiquidity}
         yesProbability={yesProbability}
         noProbability={noProbability}
-        usdcLiquidity={marketState.usdcLiquidity.toNumber()}
+        usdcLiquidity={actualUsdcLiquidity !== null ? actualUsdcLiquidity : marketState.usdcLiquidity.toNumber()}
         isSettled={marketState.isSettled}
         winningOutcome={marketState.winningOutcome}
       />
+      
+      {/* Debug: Show USDC values */}
+      {publicKey && (
+        <details className="mb-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-2 rounded">
+          <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">🔍 USDC Value Debug</summary>
+          <div className="mt-2 space-y-1 font-mono text-xs">
+            <div><strong>Market Statistics USDC Liquidity (rawAmount):</strong> {marketState.usdcLiquidity.toNumber().toLocaleString()}</div>
+            <div><strong>Market Statistics USDC Liquidity (BN):</strong> {marketState.usdcLiquidity.toString()}</div>
+            <div><strong>Your Portfolio USDC Raw Amount:</strong> Check console for actual value</div>
+          </div>
+        </details>
+      )}
+      
+      {/* Debug: Show mint addresses used for Market Stats vs Portfolio */}
+      {publicKey && (
+        <details className="mb-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-2 rounded">
+          <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">🔍 Mint Address Verification</summary>
+          <div className="mt-2 space-y-1 font-mono text-xs">
+            <div><strong>Market Statistics uses:</strong></div>
+            <div>YES Liquidity: {yesLiquidity.toLocaleString()} (from marketState.yesLiquidity)</div>
+            <div>NO Liquidity: {noLiquidity.toLocaleString()} (from marketState.noLiquidity)</div>
+            <div className="mt-2"><strong>Your Portfolio uses:</strong></div>
+            <div>YES Mint: {marketState.yesMint.toString()}</div>
+            <div>NO Mint: {marketState.noMint.toString()}</div>
+            <div>USDC Mint: {marketState.usdcMint.toString()}</div>
+            <div className="mt-2"><strong>User:</strong> {publicKey.toString()}</div>
+          </div>
+        </details>
+      )}
 
       {/* Trading Panel */}
       {!marketState.isSettled && timeRemaining > 0 && (
@@ -221,18 +299,23 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
           usdcMint={marketState.usdcMint}
           program={program}
           marketData={marketState}
-          onTransactionComplete={() => fetchMarket(false)}
+          onTransactionComplete={() => {
+            fetchMarket(false);
+            setPortfolioRefresh(prev => prev + 1);
+          }}
         />
       )}
 
       {/* User Portfolio */}
       {publicKey && (
         <UserPortfolio
+          key={portfolioRefresh}
           userPublicKey={publicKey}
           yesMint={marketState.yesMint}
           noMint={marketState.noMint}
           usdcMint={marketState.usdcMint}
           connection={connection}
+          refreshTrigger={portfolioRefresh}
         />
       )}
     </div>

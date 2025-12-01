@@ -166,7 +166,7 @@ export function TradingPanel({
           const snakeCaseMethod = "buy_tokens";
           if ((program.methods as any)[snakeCaseMethod]) {
             return await (program.methods as any)[snakeCaseMethod](amountBN, outcomeEnum)
-              .accounts(accounts)
+          .accounts(accounts)
               .instruction();
           }
           throw new Error("Method not found");
@@ -174,55 +174,113 @@ export function TradingPanel({
 
         try {
           instruction = await getInstruction();
-        } catch (err) {
+        } catch (err: any) {
           // Fallback to manual encoding if method not found or encoding fails
-          console.log("Anchor method failed, trying manual encoding...");
-          // ... (manual encoding logic) ...
-          // We need to refactor the manual encoding to return an instruction instead of sending
-
-          // Reuse the manual encoding logic from before but adapt it
-          const outcomeU8 = outcome === "yes" ? 0 : 1;
+          console.log("Anchor method failed, trying manual encoding...", err);
+          
+          // Use the encoding coder if available (with u8 enum replacement)
+          const encodingCoder = (program as any)._encodingCoder;
           const originalIdl = (program as any)._idl;
-          const buyTokensIx = originalIdl?.instructions.find((ix: any) => ix.name === "buy_tokens");
+          
+          if (!encodingCoder || !originalIdl) {
+            throw new Error("Encoding coder or IDL not available for manual encoding");
+          }
 
-          if (!buyTokensIx || !buyTokensIx.discriminator) throw new Error("Could not find instruction discriminator");
+          // Get discriminator from IDL
+          const buyTokensIx = originalIdl.instructions.find((ix: any) => ix.name === "buy_tokens");
+          if (!buyTokensIx || !buyTokensIx.discriminator) {
+            throw new Error("Could not find buy_tokens instruction discriminator");
+          }
 
           const discriminator = Buffer.from(buyTokensIx.discriminator);
-          const amountBuffer = Buffer.allocUnsafe(8);
-          amountBuffer.writeBigUInt64LE(BigInt(amountBN.toString()), 0);
-          const argsBuffer = Buffer.concat([amountBuffer, Buffer.from([outcomeU8])]);
-          const instructionData = Buffer.concat([discriminator, argsBuffer]);
+          
+          // Use encoding coder's layout to encode arguments properly
+          // This handles u64 and u8 encoding correctly
+          try {
+            const layout = (encodingCoder as any).layoutForType("buy_tokens");
+            if (!layout) {
+              throw new Error("Could not get layout for buy_tokens instruction");
+            }
+            
+            const argsBuffer = Buffer.alloc(1000); // Allocate enough space
+            const outcomeU8 = outcome === "yes" ? 0 : 1;
+            const span = layout.encode({
+              amount_usdc: amountBN,
+              outcome: outcomeU8,
+            }, argsBuffer);
+            
+            const instructionData = Buffer.concat([discriminator, argsBuffer.slice(0, span)]);
+            
+            instruction = {
+              keys: [
+                { pubkey: accounts.market, isSigner: false, isWritable: true },
+                { pubkey: accounts.user, isSigner: true, isWritable: true },
+                { pubkey: accounts.yesMint, isSigner: false, isWritable: true },
+                { pubkey: accounts.noMint, isSigner: false, isWritable: true },
+                { pubkey: accounts.userTokenAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.userUsdcAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.yesLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.noLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.usdcLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.tokenProgram, isSigner: false, isWritable: false },
+              ],
+              programId: program.programId,
+              data: instructionData,
+            };
+          } catch (layoutError: any) {
+            console.error("Layout encoding failed, trying manual buffer encoding:", layoutError);
+            // Fallback to manual buffer encoding
+            const outcomeU8 = outcome === "yes" ? 0 : 1;
+            const amountBuffer = Buffer.allocUnsafe(8);
+            amountBuffer.writeBigUInt64LE(BigInt(amountBN.toString()), 0);
+            const argsBuffer = Buffer.concat([amountBuffer, Buffer.from([outcomeU8])]);
+            const instructionData = Buffer.concat([discriminator, argsBuffer]);
 
-          instruction = {
-            keys: [
-              { pubkey: accounts.market, isSigner: false, isWritable: true },
-              { pubkey: accounts.user, isSigner: true, isWritable: true },
-              { pubkey: accounts.yesMint, isSigner: false, isWritable: false },
-              { pubkey: accounts.noMint, isSigner: false, isWritable: false },
-              { pubkey: accounts.userTokenAccount, isSigner: false, isWritable: true },
-              { pubkey: accounts.userUsdcAccount, isSigner: false, isWritable: true },
-              { pubkey: accounts.yesLiquidityAccount, isSigner: false, isWritable: true },
-              { pubkey: accounts.noLiquidityAccount, isSigner: false, isWritable: true },
-              { pubkey: accounts.usdcLiquidityAccount, isSigner: false, isWritable: true },
-              { pubkey: accounts.tokenProgram, isSigner: false, isWritable: false },
-            ],
-            programId: program.programId,
-            data: instructionData,
-          };
+            instruction = {
+              keys: [
+                { pubkey: accounts.market, isSigner: false, isWritable: true },
+                { pubkey: accounts.user, isSigner: true, isWritable: true },
+                { pubkey: accounts.yesMint, isSigner: false, isWritable: true },
+                { pubkey: accounts.noMint, isSigner: false, isWritable: true },
+                { pubkey: accounts.userTokenAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.userUsdcAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.yesLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.noLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.usdcLiquidityAccount, isSigner: false, isWritable: true },
+                { pubkey: accounts.tokenProgram, isSigner: false, isWritable: false },
+              ],
+              programId: program.programId,
+              data: instructionData,
+            };
+          }
         }
 
         transaction.add(instruction);
 
-        // Send transaction
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
+        // Set fee payer first
         transaction.feePayer = publicKey;
+
+        // Get fresh blockhash right before sending to avoid expiration
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        transaction.recentBlockhash = blockhash;
 
         if (!signTransaction) throw new Error("Wallet not connected");
 
+        // Sign transaction
         const signedTx = await signTransaction(transaction);
-        const signature = await connection.sendRawTransaction(signedTx.serialize());
-        await connection.confirmTransaction(signature, "confirmed");
+        
+        // Send transaction with fresh blockhash
+        const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+          skipPreflight: false,
+          maxRetries: 3,
+        });
+        
+        // Confirm transaction with blockheight tracking
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        }, "confirmed");
 
         setStatus(`✅ Success! Transaction: ${signature}`);
         setAmount("");
@@ -388,16 +446,30 @@ export function TradingPanel({
 
         transaction.add(instruction);
 
-        // Send transaction
-        const { blockhash } = await connection.getLatestBlockhash();
-        transaction.recentBlockhash = blockhash;
+        // Set fee payer first
         transaction.feePayer = publicKey;
+
+        // Get fresh blockhash right before sending to avoid expiration
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("confirmed");
+        transaction.recentBlockhash = blockhash;
 
         if (!signTransaction) throw new Error("Wallet not connected");
 
+        // Sign transaction
         const signedTx = await signTransaction(transaction);
-        const signature = await connection.sendRawTransaction(signedTx.serialize());
-        await connection.confirmTransaction(signature, "confirmed");
+        
+        // Send transaction with fresh blockhash
+        const signature = await connection.sendRawTransaction(signedTx.serialize(), {
+          skipPreflight: false,
+          maxRetries: 3,
+        });
+        
+        // Confirm transaction with blockheight tracking
+        await connection.confirmTransaction({
+          signature,
+          blockhash,
+          lastValidBlockHeight,
+        }, "confirmed");
 
         setStatus(`✅ Success! Sold tokens. Tx: ${signature}`);
         setAmount("");
@@ -421,18 +493,18 @@ export function TradingPanel({
         <button
           onClick={() => setAction("buy")}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${action === "buy"
-            ? "bg-purple-600 text-white"
-            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
+              ? "bg-purple-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+          }`}
         >
           Buy
         </button>
         <button
           onClick={() => setAction("sell")}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${action === "sell"
-            ? "bg-purple-600 text-white"
-            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
+              ? "bg-purple-600 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+          }`}
         >
           Sell
         </button>
@@ -443,18 +515,18 @@ export function TradingPanel({
         <button
           onClick={() => setOutcome("yes")}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${outcome === "yes"
-            ? "bg-green-500 text-white"
-            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
+              ? "bg-green-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+          }`}
         >
           YES
         </button>
         <button
           onClick={() => setOutcome("no")}
           className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${outcome === "no"
-            ? "bg-red-500 text-white"
-            : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-            }`}
+              ? "bg-red-500 text-white"
+              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
+          }`}
         >
           NO
         </button>

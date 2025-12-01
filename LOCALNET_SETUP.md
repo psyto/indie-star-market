@@ -153,3 +153,6 @@ npm run dev
 - **Wallet connection**: Your browser wallet needs to be configured for localnet. Some wallets may require manual network configuration
 - **Program ID**: The program ID is `3p6L6xhYmiuHFqDvNZyJnvQ5d6c9Nhy5D673kDdsrW7h` (configured in Anchor.toml)
 
+
+
+
