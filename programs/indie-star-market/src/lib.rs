@@ -71,6 +71,7 @@ pub mod indie_star_market {
         // Extract values before mutable borrows
         let bump = market.bump;
         let authority = market.authority;
+        let project_name = market.project_name.clone();
         let current_usdc_liquidity = market.usdc_liquidity;
         let (mint, _liquidity_account, current_liquidity) = match outcome {
             Outcome::Yes => (
@@ -115,8 +116,9 @@ pub mod indie_star_market {
 
         // Mint tokens to user
         let seeds = &[
-            b"market_v2",
+            b"market_v2".as_ref(),
             authority.as_ref(),
+            project_name.as_bytes(),
             &[bump],
         ];
         let signer = &[&seeds[..]];
@@ -186,6 +188,7 @@ pub mod indie_star_market {
         // Extract values before mutable borrows
         let bump = market.bump;
         let authority = market.authority;
+        let project_name = market.project_name.clone();
         let current_usdc_liquidity = market.usdc_liquidity;
         let (mint, _liquidity_account, current_liquidity) = match outcome {
             Outcome::Yes => (
@@ -222,24 +225,25 @@ pub mod indie_star_market {
                 .ok_or(ErrorCode::MathOverflow)?
         };
 
-        // Burn tokens from user
-        let seeds = &[
-            b"market_v2",
-            authority.as_ref(),
-            &[bump],
-        ];
-        let signer = &[&seeds[..]];
-
-        let burn_ctx = CpiContext::new_with_signer(
+        // Burn tokens from user (user is the authority of their own token account)
+        let burn_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             token::Burn {
                 mint: mint.to_account_info(),
                 from: ctx.accounts.user_token_account.to_account_info(),
-                authority: market_account_info.clone(),
+                authority: ctx.accounts.user.to_account_info(),
             },
-            signer,
         );
         token::burn(burn_ctx, amount_tokens)?;
+
+        // Prepare signer seeds for USDC transfer from liquidity pool
+        let seeds = &[
+            b"market_v2".as_ref(),
+            authority.as_ref(),
+            project_name.as_bytes(),
+            &[bump],
+        ];
+        let signer = &[&seeds[..]];
 
         // Transfer USDC from liquidity pool to user
         let transfer_ctx = CpiContext::new_with_signer(
@@ -353,25 +357,27 @@ pub mod indie_star_market {
         // Extract values
         let bump = market.bump;
         let authority = market.authority;
+        let project_name = market.project_name.clone();
 
-        // Burn winning tokens
-        let seeds = &[
-            b"market_v2",
-            authority.as_ref(),
-            &[bump],
-        ];
-        let signer = &[&seeds[..]];
-
-        let burn_ctx = CpiContext::new_with_signer(
+        // Burn winning tokens (user is the authority of their own token account)
+        let burn_ctx = CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
             token::Burn {
                 mint: mint.to_account_info(),
                 from: ctx.accounts.user_token_account.to_account_info(),
-                authority: market_account_info.clone(),
+                authority: ctx.accounts.user.to_account_info(),
             },
-            signer,
         );
         token::burn(burn_ctx, amount)?;
+
+        // Prepare signer seeds for USDC transfer from liquidity pool
+        let seeds = &[
+            b"market_v2".as_ref(),
+            authority.as_ref(),
+            project_name.as_bytes(),
+            &[bump],
+        ];
+        let signer = &[&seeds[..]];
 
         // Transfer USDC 1:1 to user
         let transfer_ctx = CpiContext::new_with_signer(
@@ -454,9 +460,11 @@ pub struct BuyTokens<'info> {
     pub user: Signer<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub yes_mint: AccountInfo<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]
@@ -498,9 +506,11 @@ pub struct SellTokens<'info> {
     pub user: Signer<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub yes_mint: AccountInfo<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]
@@ -553,9 +563,11 @@ pub struct RedeemTokens<'info> {
     pub user: Signer<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub yes_mint: AccountInfo<'info>,
 
     /// CHECK: Validated in instruction
+    #[account(mut)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]

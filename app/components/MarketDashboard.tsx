@@ -4,7 +4,7 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey } from "@solana/web3.js";
 import { useEffect, useState, useMemo } from "react";
 import { useProgram } from "@/lib/program";
-import { TradingPanel } from "./TradingPanel";
+import { TradingPanelEnhanced } from "./TradingPanelEnhanced";
 import { MarketStats } from "./MarketStats";
 import { UserPortfolio } from "./UserPortfolio";
 
@@ -28,88 +28,71 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
     }
   }, [marketAddress]);
 
-  useEffect(() => {
+  const fetchMarket = async (showLoading = false) => {
     if (!program || !marketPda) return;
 
-    let intervalId: NodeJS.Timeout | null = null;
-    let isInitialLoad = true;
+    try {
+      if (showLoading) {
+        setLoading(true);
+      }
 
-    const fetchMarket = async (showLoading = false) => {
-      try {
-        if (showLoading) {
-          setLoading(true);
+      // Try standard account fetch first
+      let market;
+      if ((program.account as any)?.marketState?.fetch) {
+        market = await (program.account as any).marketState.fetch(marketPda);
+      } else if ((program as any).customFetchAccount) {
+        // Fallback to custom fetch method if account clients aren't available
+        market = await (program as any).customFetchAccount("MarketState", marketPda);
+      } else {
+        // Last resort: fetch account info directly and decode manually
+        const accountInfo = await connection.getAccountInfo(marketPda);
+        if (!accountInfo) {
+          throw new Error("Market account not found");
         }
-        
-        // Try standard account fetch first
-        let market;
-        if ((program.account as any)?.marketState?.fetch) {
-          market = await (program.account as any).marketState.fetch(marketPda);
-        } else if ((program as any).customFetchAccount) {
-          // Fallback to custom fetch method if account clients aren't available
-          market = await (program as any).customFetchAccount("MarketState", marketPda);
+        const coder = (program as any).coder?.accounts;
+        if (coder) {
+          market = coder.decode("MarketState", accountInfo.data);
         } else {
-          // Last resort: fetch account info directly and decode manually
-          const accountInfo = await connection.getAccountInfo(marketPda);
-          if (!accountInfo) {
-            throw new Error("Market account not found");
-          }
-          const coder = (program as any).coder?.accounts;
-          if (coder) {
-            market = coder.decode("MarketState", accountInfo.data);
-          } else {
-            throw new Error("Unable to decode market account");
-          }
-        }
-        
-        setMarketState(market);
-        setError(null);
-        setLoading(false);
-        
-        // Start polling only after successful initial fetch
-        if (isInitialLoad && !intervalId) {
-          isInitialLoad = false;
-          // Poll every 15 seconds (less frequent to avoid annoying refreshes)
-          intervalId = setInterval(() => {
-            fetchMarket(false).catch(() => {
-              // Stop polling on error
-              if (intervalId) {
-                clearInterval(intervalId);
-                intervalId = null;
-              }
-            });
-          }, 15000);
-        }
-      } catch (err: any) {
-        const errorMessage = err.message || "Failed to fetch market";
-        setError(errorMessage);
-        setLoading(false);
-        
-        // Stop polling on error
-        if (intervalId) {
-          clearInterval(intervalId);
-          intervalId = null;
-        }
-        
-        console.error("Error fetching market:", err);
-        
-        // If account not found, provide helpful guidance
-        if (errorMessage.includes("not found")) {
-          console.info(
-            "💡 Tip: The market PDA was derived, but the market account hasn't been created yet.\n" +
-            "To create a market, run: yarn create-market\n" +
-            "Make sure you're connected to the correct network (devnet/localnet)."
-          );
+          throw new Error("Unable to decode market account");
         }
       }
-    };
+
+      setMarketState(market);
+      setError(null);
+      setLoading(false);
+    } catch (err: any) {
+      const errorMessage = err.message || "Failed to fetch market";
+      setError(errorMessage);
+      setLoading(false);
+
+      console.error("Error fetching market:", err);
+
+      // If account not found, provide helpful guidance
+      if (errorMessage.includes("not found")) {
+        console.info(
+          "💡 Tip: The market PDA was derived, but the market account hasn't been created yet.\n" +
+          "To create a market, run: yarn create-market\n" +
+          "Make sure you're connected to the correct network (devnet/localnet)."
+        );
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (!program || !marketPda) return;
 
     // Initial fetch with loading indicator
     fetchMarket(true);
 
+    // Poll every 15 seconds
+    const intervalId = setInterval(() => {
+      fetchMarket(false).catch((err) => {
+        console.error("Error polling market:", err);
+      });
+    }, 15000);
+
     return () => {
-      if (intervalId) {
-        clearInterval(intervalId);
-      }
+      clearInterval(intervalId);
     };
   }, [program, marketPda, connection]);
 
@@ -231,12 +214,14 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
 
       {/* Trading Panel */}
       {!marketState.isSettled && timeRemaining > 0 && (
-        <TradingPanel
+        <TradingPanelEnhanced
           marketPda={marketPda!}
           yesMint={marketState.yesMint}
           noMint={marketState.noMint}
           usdcMint={marketState.usdcMint}
           program={program}
+          marketData={marketState}
+          onTransactionComplete={() => fetchMarket(false)}
         />
       )}
 

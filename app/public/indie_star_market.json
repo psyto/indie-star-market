@@ -34,10 +34,12 @@
           "signer": true
         },
         {
-          "name": "yes_mint"
+          "name": "yes_mint",
+          "writable": true
         },
         {
-          "name": "no_mint"
+          "name": "no_mint",
+          "writable": true
         },
         {
           "name": "user_token_account",
@@ -200,12 +202,19 @@
                   114,
                   107,
                   101,
-                  116
+                  116,
+                  95,
+                  118,
+                  50
                 ]
               },
               {
                 "kind": "account",
                 "path": "authority"
+              },
+              {
+                "kind": "arg",
+                "path": "project_name"
               }
             ]
           }
@@ -222,10 +231,109 @@
           "name": "no_mint"
         },
         {
-          "name": "usdc_mint",
-          "docs": [
-            "USDC mint address"
-          ]
+          "name": "usdc_mint"
+        },
+        {
+          "name": "yes_liquidity_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  121,
+                  101,
+                  115
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "no_liquidity_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  110,
+                  111
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "usdc_liquidity_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  100,
+                  99
+                ]
+              }
+            ]
+          }
         },
         {
           "name": "token_program",
@@ -282,10 +390,12 @@
           "signer": true
         },
         {
-          "name": "yes_mint"
+          "name": "yes_mint",
+          "writable": true
         },
         {
-          "name": "no_mint"
+          "name": "no_mint",
+          "writable": true
         },
         {
           "name": "user_token_account",
@@ -369,10 +479,12 @@
           "signer": true
         },
         {
-          "name": "yes_mint"
+          "name": "yes_mint",
+          "writable": true
         },
         {
-          "name": "no_mint"
+          "name": "no_mint",
+          "writable": true
         },
         {
           "name": "user_token_account",
