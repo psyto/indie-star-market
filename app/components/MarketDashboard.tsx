@@ -8,6 +8,7 @@ import { TradingPanelEnhanced } from "./TradingPanelEnhanced";
 import { MarketStats } from "./MarketStats";
 import { UserPortfolio } from "./UserPortfolio";
 import { getAccount } from "@solana/spl-token";
+import { saveMarket, updateMarketAccess } from "@/lib/marketRegistry";
 
 interface MarketDashboardProps {
   marketAddress: string;
@@ -63,6 +64,12 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
       setMarketState(market);
       setError(null);
       setLoading(false);
+      
+      // Save market to registry for discovery
+      if (marketPda) {
+        saveMarket(marketPda.toString(), market.projectName?.toString());
+        updateMarketAccess(marketPda.toString());
+      }
     } catch (err: any) {
       const errorMessage = err.message || "Failed to fetch market";
       setError(errorMessage);
