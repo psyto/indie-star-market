@@ -69,7 +69,7 @@ export default function MarketsPage() {
               Browse and manage your saved prediction markets
             </p>
           </div>
-          <div className="glass-panel rounded-full p-1 relative z-50">
+          <div className="glass-panel rounded-full p-1">
             <WalletMultiButton />
           </div>
         </div>

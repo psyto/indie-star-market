@@ -82,7 +82,7 @@ export default function MarketDetailPage() {
               <p className="text-xs font-mono text-gray-400 mt-1">{address}</p>
             </div>
           </div>
-          <div className="glass-panel rounded-full p-1 relative z-50">
+          <div className="glass-panel rounded-full p-1">
             <WalletMultiButton />
           </div>
         </div>

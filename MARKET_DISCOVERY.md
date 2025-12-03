@@ -129,3 +129,4 @@ Home Page → Markets List → Market Detail
 - The registry can be upgraded to use a backend API or on-chain storage for production
 
 
+

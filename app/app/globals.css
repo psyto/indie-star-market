@@ -76,18 +76,6 @@ body {
   }
 }
 
-/* Wallet adapter modal z-index fix */
-.wallet-adapter-modal-wrapper {
-  z-index: 9999 !important;
-}
-
-.wallet-adapter-dropdown {
-  z-index: 1000 !important;
-}
-
-.wallet-adapter-dropdown-list {
-  z-index: 1000 !important;
-}
 
 
 

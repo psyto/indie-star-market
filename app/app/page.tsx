@@ -82,7 +82,7 @@ export default function Home() {
         {/* Header Section */}
         <div className="relative animate-fade-in-up">
           {/* Wallet Header */}
-          <div className="flex justify-between items-start mb-6">
+          <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-2">
                 Indie Star Market
@@ -91,7 +91,7 @@ export default function Home() {
                 Predict the success of indie projects
               </p>
             </div>
-            <div className="glass-panel rounded-full p-1 relative z-50">
+            <div className="glass-panel rounded-full p-1">
               <WalletMultiButton />
             </div>
           </div>
