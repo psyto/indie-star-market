@@ -29,7 +29,7 @@ export default function Home() {
               <span className="text-gradient">Indie Star</span> Market
             </h1>
             <p className="text-gray-400 text-lg md:text-xl font-light tracking-wide max-w-2xl">
-              Translate abstract technology into beautiful reality. A Creative Collective forging a new era of stories.
+              The Prediction Market for Indie.fun. Where technology meets emotion.
             </p>
           </div>
           <div className="glass-panel rounded-full p-1">
