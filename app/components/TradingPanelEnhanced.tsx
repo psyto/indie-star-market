@@ -364,82 +364,83 @@ export function TradingPanelEnhanced({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-        Trade Tokens
+    <div className="glass-panel rounded-2xl p-8">
+      <h3 className="text-2xl font-light mb-6 text-white flex items-center gap-2">
+        <span className="text-fuchsia-400">⚡</span> Make Your Move
       </h3>
 
       {/* Action Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 p-1 bg-black/40 rounded-xl border border-white/5">
         <button
           onClick={() => setAction("buy")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-            action === "buy"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "buy"
+              ? "bg-white/10 text-white shadow-lg"
+              : "text-gray-400 hover:text-white"
+            }`}
         >
           Buy
         </button>
         <button
           onClick={() => setAction("sell")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-            action === "sell"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "sell"
+              ? "bg-white/10 text-white shadow-lg"
+              : "text-gray-400 hover:text-white"
+            }`}
         >
           Sell
         </button>
       </div>
 
       {/* Outcome Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-4 mb-6">
         <button
           onClick={() => setOutcome("yes")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-            outcome === "yes"
-              ? "bg-green-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "yes"
+              ? "bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+              : "bg-black/40 border-white/5 text-gray-400 hover:border-green-500/50"
+            }`}
         >
           YES
         </button>
         <button
           onClick={() => setOutcome("no")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${
-            outcome === "no"
-              ? "bg-red-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "no"
+              ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+              : "bg-black/40 border-white/5 text-gray-400 hover:border-red-500/50"
+            }`}
         >
           NO
         </button>
       </div>
 
       {/* Amount Input */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-400 mb-2">
           Amount ({action === "buy" ? "USDC" : "Tokens"})
         </label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          step="0.01"
-          min="0"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        <div className="relative">
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            min="0"
+            className="w-full px-6 py-4 border border-white/10 rounded-xl bg-black/40 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 transition-all"
+          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-mono">
+            {action === "buy" ? "USDC" : outcome.toUpperCase()}
+          </div>
+        </div>
       </div>
 
       {/* Price Preview */}
       {preview && (
-        <div className="mb-4 p-3 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg">
-          <p className="text-sm font-medium text-purple-900 dark:text-purple-200">
-            📊 Price Preview
+        <div className="mb-6 p-4 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl">
+          <p className="text-sm font-medium text-fuchsia-300 mb-1 flex items-center gap-2">
+            <span>📊</span> Price Preview
           </p>
-          <p className="text-sm text-purple-700 dark:text-purple-300 mt-1">
+          <p className="text-sm text-fuchsia-100/80">
             {preview}
           </p>
         </div>
@@ -449,38 +450,34 @@ export function TradingPanelEnhanced({
       <button
         onClick={handleTrade}
         disabled={loading || !publicKey || !amount || parseFloat(amount) <= 0}
-        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+        className={`w-full py-4 px-6 rounded-xl font-medium transition-all shadow-lg ${loading || !publicKey || !amount || parseFloat(amount) <= 0
+            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+            : "bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white shadow-fuchsia-900/20"
+          }`}
       >
         {loading ? "Processing..." : `${action === "buy" ? "Buy" : "Sell"} ${outcome.toUpperCase()} Tokens`}
       </button>
 
       {/* Status Message */}
       {status && (
-        <div className={`mt-4 p-3 rounded-lg ${
-          status.includes("✅")
-            ? "bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800"
+        <div className={`mt-6 p-4 rounded-xl border ${status.includes("✅")
+            ? "bg-green-500/10 border-green-500/20 text-green-300"
             : status.includes("❌")
-            ? "bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800"
-            : "bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800"
-        }`}>
-          <p className={`text-sm ${
-            status.includes("✅")
-              ? "text-green-800 dark:text-green-200"
-              : status.includes("❌")
-              ? "text-red-800 dark:text-red-200"
-              : "text-blue-800 dark:text-blue-200"
+              ? "bg-red-500/10 border-red-500/20 text-red-300"
+              : "bg-blue-500/10 border-blue-500/20 text-blue-300"
           }`}>
+          <p className="text-sm font-mono">
             {status}
           </p>
         </div>
       )}
 
       {/* Helper Buttons for Testing */}
-      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          Testing on Localnet? Need funds?
+      <div className="mt-8 pt-6 border-t border-white/5">
+        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
+          Developer Tools
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={async () => {
               if (!publicKey) {
@@ -511,9 +508,9 @@ export function TradingPanelEnhanced({
               }
             }}
             disabled={loading || !publicKey}
-            className="flex-1 py-2 px-4 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium transition-colors border border-blue-300 dark:border-blue-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            💧 Airdrop 1 SOL
+            💧 Airdrop SOL
           </button>
           <button
             onClick={async () => {
@@ -546,9 +543,9 @@ export function TradingPanelEnhanced({
               }
             }}
             disabled={loading || !publicKey}
-            className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors border border-white/5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            💸 Mint 1k USDC
+            💸 Mint USDC
           </button>
         </div>
       </div>

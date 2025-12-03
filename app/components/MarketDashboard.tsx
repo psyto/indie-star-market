@@ -103,36 +103,28 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   useEffect(() => {
     const checkLiquidityAccount = async () => {
       if (!program || !marketPda || !marketState) return;
-      
+
       try {
         // Derive USDC liquidity account PDA
         const [usdcLiquidityAccount] = PublicKey.findProgramAddressSync(
           [Buffer.from("liquidity"), marketPda.toBuffer(), Buffer.from("usdc")],
           program.programId
         );
-        
+
         // Get actual balance from liquidity account
         const liquidityAccount = await getAccount(connection, usdcLiquidityAccount);
         const actualRawAmount = liquidityAccount.amount;
-        const actualRawNumber = typeof actualRawAmount === 'bigint' 
-          ? Number(actualRawAmount) 
+        const actualRawNumber = typeof actualRawAmount === 'bigint'
+          ? Number(actualRawAmount)
           : Number(actualRawAmount);
-        
+
         setActualUsdcLiquidity(actualRawNumber);
-        
-        console.log("🔍 USDC Liquidity Comparison:", {
-          marketState_usdcLiquidity: marketState.usdcLiquidity.toString(),
-          marketState_usdcLiquidity_number: marketState.usdcLiquidity.toNumber(),
-          actualLiquidityAccount_rawAmount: actualRawAmount.toString(),
-          actualLiquidityAccount_number: actualRawNumber,
-          liquidityAccountAddress: usdcLiquidityAccount.toString(),
-        });
       } catch (err) {
-        console.error("Error checking liquidity account:", err);
+        // console.error("Error checking liquidity account:", err);
         setActualUsdcLiquidity(null);
       }
     };
-    
+
     if (marketState) {
       checkLiquidityAccount();
     }
@@ -140,10 +132,10 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
+      <div className="glass-panel rounded-2xl p-8">
         <div className="animate-pulse space-y-4">
-          <div className="h-8 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
-          <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+          <div className="h-8 bg-white/10 rounded w-1/2"></div>
+          <div className="h-4 bg-white/5 rounded w-3/4"></div>
         </div>
       </div>
     );
@@ -152,27 +144,29 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   if (error) {
     const isAccountNotFound = error.includes("not found");
     return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
+      <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-6 backdrop-blur-sm">
         <div className="space-y-3">
-          <p className="text-red-800 dark:text-red-200 font-semibold">Error: {error}</p>
+          <p className="text-red-400 font-semibold flex items-center gap-2">
+            <span>⚠️</span> Error: {error}
+          </p>
           {isAccountNotFound && (
-            <div className="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
-              <p className="text-blue-900 dark:text-blue-200 font-medium mb-2">
+            <div className="mt-4 p-4 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+              <p className="text-blue-300 font-medium mb-2">
                 💡 Market Not Created Yet
               </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300 mb-3">
+              <p className="text-sm text-blue-200/80 mb-3">
                 This PDA address was derived, but the market account hasn't been created on-chain yet.
               </p>
-              <div className="text-sm text-blue-700 dark:text-blue-300 space-y-2">
+              <div className="text-sm text-blue-200/80 space-y-2">
                 <p className="font-medium">To create a market:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
+                <ol className="list-decimal list-inside space-y-1 ml-2 font-mono text-xs">
                   <li>Open a terminal in the project root</li>
-                  <li>Run: <code className="bg-blue-100 dark:bg-blue-900 px-2 py-1 rounded">yarn create-market</code></li>
+                  <li>Run: <span className="text-blue-300">yarn create-market</span></li>
                   <li>Copy the "Market PDA" address from the output</li>
                   <li>Paste it in the input field above</li>
                 </ol>
-                <p className="mt-3 text-xs text-blue-600 dark:text-blue-400">
-                  Note: Make sure you're connected to the correct network (devnet/localnet) 
+                <p className="mt-3 text-xs text-blue-300/60">
+                  Note: Make sure you're connected to the correct network (devnet/localnet)
                   that matches where you created the market.
                 </p>
               </div>
@@ -185,8 +179,8 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
 
   if (!marketState) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-        <p className="text-gray-600 dark:text-gray-300">Market not found</p>
+      <div className="glass-panel rounded-2xl p-8">
+        <p className="text-gray-400">Market not found</p>
       </div>
     );
   }
@@ -209,46 +203,47 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   const noProbability = 100 - yesProbability;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Market Header */}
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-        <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+      <div className="glass-panel rounded-2xl p-8 relative overflow-hidden group">
+        <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+          <div className="w-32 h-32 bg-fuchsia-500 rounded-full blur-3xl"></div>
+        </div>
+
+        <h2 className="text-4xl font-bold text-white mb-2 tracking-tight">
           {marketState.projectName}
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+            <p className="text-sm text-gray-400 mb-1">
               Fundraising Goal
             </p>
-            <p className="text-xl font-semibold text-gray-900 dark:text-white">
-              {marketState.fundraisingGoal.toNumber().toLocaleString()} USDC
+            <p className="text-2xl font-semibold text-white tracking-tight">
+              {marketState.fundraisingGoal.toNumber().toLocaleString()} <span className="text-sm text-fuchsia-400">USDC</span>
             </p>
           </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+            <p className="text-sm text-gray-400 mb-1">
               Time Remaining
             </p>
-            <p className="text-xl font-semibold text-gray-900 dark:text-white">
+            <p className="text-2xl font-semibold text-white tracking-tight">
               {timeRemaining > 0
                 ? `${daysRemaining}d ${hoursRemaining}h`
                 : "Ended"}
             </p>
           </div>
-          <div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Status</p>
-            <p className="text-xl font-semibold text-gray-900 dark:text-white">
-              {marketState.isSettled ? "Settled" : "Active"}
-            </p>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
+            <p className="text-sm text-gray-400 mb-1">Status</p>
+            <div className="flex items-center gap-2">
+              <span className={`w-2 h-2 rounded-full ${marketState.isSettled ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`}></span>
+              <p className="text-2xl font-semibold text-white tracking-tight">
+                {marketState.isSettled ? "Settled" : "Active"}
+              </p>
+            </div>
           </div>
         </div>
       </div>
-
-      {/* Debug: Log USDC liquidity value */}
-      {console.log("🔍 Market Statistics USDC Liquidity:", {
-        rawBN: marketState.usdcLiquidity.toString(),
-        rawNumber: marketState.usdcLiquidity.toNumber(),
-        formatted: marketState.usdcLiquidity.toNumber().toLocaleString(),
-      })}
 
       {/* Market Stats */}
       <MarketStats
@@ -260,35 +255,6 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
         isSettled={marketState.isSettled}
         winningOutcome={marketState.winningOutcome}
       />
-      
-      {/* Debug: Show USDC values */}
-      {publicKey && (
-        <details className="mb-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-2 rounded">
-          <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">🔍 USDC Value Debug</summary>
-          <div className="mt-2 space-y-1 font-mono text-xs">
-            <div><strong>Market Statistics USDC Liquidity (rawAmount):</strong> {marketState.usdcLiquidity.toNumber().toLocaleString()}</div>
-            <div><strong>Market Statistics USDC Liquidity (BN):</strong> {marketState.usdcLiquidity.toString()}</div>
-            <div><strong>Your Portfolio USDC Raw Amount:</strong> Check console for actual value</div>
-          </div>
-        </details>
-      )}
-      
-      {/* Debug: Show mint addresses used for Market Stats vs Portfolio */}
-      {publicKey && (
-        <details className="mb-4 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900 p-2 rounded">
-          <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">🔍 Mint Address Verification</summary>
-          <div className="mt-2 space-y-1 font-mono text-xs">
-            <div><strong>Market Statistics uses:</strong></div>
-            <div>YES Liquidity: {yesLiquidity.toLocaleString()} (from marketState.yesLiquidity)</div>
-            <div>NO Liquidity: {noLiquidity.toLocaleString()} (from marketState.noLiquidity)</div>
-            <div className="mt-2"><strong>Your Portfolio uses:</strong></div>
-            <div>YES Mint: {marketState.yesMint.toString()}</div>
-            <div>NO Mint: {marketState.noMint.toString()}</div>
-            <div>USDC Mint: {marketState.usdcMint.toString()}</div>
-            <div className="mt-2"><strong>User:</strong> {publicKey.toString()}</div>
-          </div>
-        </details>
-      )}
 
       {/* Trading Panel */}
       {!marketState.isSettled && timeRemaining > 0 && (

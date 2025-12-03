@@ -166,7 +166,7 @@ export function TradingPanel({
           const snakeCaseMethod = "buy_tokens";
           if ((program.methods as any)[snakeCaseMethod]) {
             return await (program.methods as any)[snakeCaseMethod](amountBN, outcomeEnum)
-          .accounts(accounts)
+              .accounts(accounts)
               .instruction();
           }
           throw new Error("Method not found");
@@ -177,11 +177,11 @@ export function TradingPanel({
         } catch (err: any) {
           // Fallback to manual encoding if method not found or encoding fails
           console.log("Anchor method failed, trying manual encoding...", err);
-          
+
           // Use the encoding coder if available (with u8 enum replacement)
           const encodingCoder = (program as any)._encodingCoder;
           const originalIdl = (program as any)._idl;
-          
+
           if (!encodingCoder || !originalIdl) {
             throw new Error("Encoding coder or IDL not available for manual encoding");
           }
@@ -193,7 +193,7 @@ export function TradingPanel({
           }
 
           const discriminator = Buffer.from(buyTokensIx.discriminator);
-          
+
           // Use encoding coder's layout to encode arguments properly
           // This handles u64 and u8 encoding correctly
           try {
@@ -201,16 +201,16 @@ export function TradingPanel({
             if (!layout) {
               throw new Error("Could not get layout for buy_tokens instruction");
             }
-            
+
             const argsBuffer = Buffer.alloc(1000); // Allocate enough space
             const outcomeU8 = outcome === "yes" ? 0 : 1;
             const span = layout.encode({
               amount_usdc: amountBN,
               outcome: outcomeU8,
             }, argsBuffer);
-            
+
             const instructionData = Buffer.concat([discriminator, argsBuffer.slice(0, span)]);
-            
+
             instruction = {
               keys: [
                 { pubkey: accounts.market, isSigner: false, isWritable: true },
@@ -268,13 +268,13 @@ export function TradingPanel({
 
         // Sign transaction
         const signedTx = await signTransaction(transaction);
-        
+
         // Send transaction with fresh blockhash
         const signature = await connection.sendRawTransaction(signedTx.serialize(), {
           skipPreflight: false,
           maxRetries: 3,
         });
-        
+
         // Confirm transaction with blockheight tracking
         await connection.confirmTransaction({
           signature,
@@ -457,13 +457,13 @@ export function TradingPanel({
 
         // Sign transaction
         const signedTx = await signTransaction(transaction);
-        
+
         // Send transaction with fresh blockhash
         const signature = await connection.sendRawTransaction(signedTx.serialize(), {
           skipPreflight: false,
           maxRetries: 3,
         });
-        
+
         // Confirm transaction with blockheight tracking
         await connection.confirmTransaction({
           signature,
@@ -483,92 +483,105 @@ export function TradingPanel({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <h3 className="text-xl font-semibold mb-4 text-gray-900 dark:text-white">
-        Trade Tokens
+    <div className="glass-panel rounded-2xl p-8">
+      <h3 className="text-2xl font-light mb-6 text-white flex items-center gap-2">
+        <span className="text-fuchsia-400">⚡</span> Make Your Move
       </h3>
 
       {/* Action Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-2 mb-6 p-1 bg-black/40 rounded-xl border border-white/5">
         <button
           onClick={() => setAction("buy")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${action === "buy"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "buy"
+            ? "bg-white/10 text-white shadow-lg"
+            : "text-gray-400 hover:text-white"
+            }`}
         >
           Buy
         </button>
         <button
           onClick={() => setAction("sell")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${action === "sell"
-              ? "bg-purple-600 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "sell"
+            ? "bg-white/10 text-white shadow-lg"
+            : "text-gray-400 hover:text-white"
+            }`}
         >
           Sell
         </button>
       </div>
 
       {/* Outcome Toggle */}
-      <div className="flex gap-2 mb-4">
+      <div className="flex gap-4 mb-6">
         <button
           onClick={() => setOutcome("yes")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${outcome === "yes"
-              ? "bg-green-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "yes"
+            ? "bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+            : "bg-black/40 border-white/5 text-gray-400 hover:border-green-500/50"
+            }`}
         >
           YES
         </button>
         <button
           onClick={() => setOutcome("no")}
-          className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${outcome === "no"
-              ? "bg-red-500 text-white"
-              : "bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300"
-          }`}
+          className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "no"
+            ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+            : "bg-black/40 border-white/5 text-gray-400 hover:border-red-500/50"
+            }`}
         >
           NO
         </button>
       </div>
 
       {/* Amount Input */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+      <div className="mb-6">
+        <label className="block text-sm font-medium text-gray-400 mb-2">
           Amount ({action === "buy" ? "USDC" : "Tokens"})
         </label>
-        <input
-          type="number"
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-          placeholder="0.00"
-          step="0.01"
-          className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-        />
+        <div className="relative">
+          <input
+            type="number"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            step="0.01"
+            className="w-full px-6 py-4 border border-white/10 rounded-xl bg-black/40 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-fuchsia-500/50 transition-all"
+          />
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 text-sm font-mono">
+            {action === "buy" ? "USDC" : outcome.toUpperCase()}
+          </div>
+        </div>
       </div>
 
       {/* Submit Button */}
       <button
         onClick={handleTrade}
         disabled={loading || !publicKey || !amount}
-        className="w-full py-3 px-4 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded-lg font-medium transition-colors"
+        className={`w-full py-4 px-6 rounded-xl font-medium transition-all shadow-lg ${loading || !publicKey || !amount
+            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+            : "bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white shadow-fuchsia-900/20"
+          }`}
       >
         {loading ? "Processing..." : `${action === "buy" ? "Buy" : "Sell"} ${outcome.toUpperCase()} Tokens`}
       </button>
 
       {/* Status Message */}
       {status && (
-        <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-          {status}
-        </p>
+        <div className={`mt-6 p-4 rounded-xl border ${status.includes("Error") || status.includes("failed")
+            ? "bg-red-500/10 border-red-500/20 text-red-300"
+            : status.includes("Success")
+              ? "bg-green-500/10 border-green-500/20 text-green-300"
+              : "bg-blue-500/10 border-blue-500/20 text-blue-300"
+          }`}>
+          <p className="text-sm font-mono">{status}</p>
+        </div>
       )}
 
       {/* Demo Mint Button */}
-      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-gray-700">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">
-          Testing on Localnet? Need funds?
+      <div className="mt-8 pt-6 border-t border-white/5">
+        <p className="text-xs text-gray-500 mb-3 uppercase tracking-wider font-semibold">
+          Developer Tools
         </p>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={async () => {
               if (!publicKey) {
@@ -599,9 +612,9 @@ export function TradingPanel({
               }
             }}
             disabled={loading || !publicKey}
-            className="flex-1 py-2 px-4 bg-blue-100 hover:bg-blue-200 dark:bg-blue-900/30 dark:hover:bg-blue-900/50 text-blue-700 dark:text-blue-300 rounded-lg text-sm font-medium transition-colors border border-blue-300 dark:border-blue-800"
+            className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors border border-white/5"
           >
-            💧 Airdrop 1 SOL
+            💧 Airdrop SOL
           </button>
           <button
             onClick={async () => {
@@ -634,9 +647,9 @@ export function TradingPanel({
               }
             }}
             disabled={loading || !publicKey}
-            className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium transition-colors border border-gray-300 dark:border-gray-600"
+            className="flex-1 py-3 px-4 bg-white/5 hover:bg-white/10 text-gray-300 rounded-xl text-sm font-medium transition-colors border border-white/5"
           >
-            💸 Mint 1k USDC
+            💸 Mint USDC
           </button>
         </div>
       </div>

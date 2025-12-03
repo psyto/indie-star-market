@@ -36,8 +36,8 @@ export function UserPortfolio({
   const [manualTrigger, setManualTrigger] = useState(0);
 
   useEffect(() => {
-    console.log("👛 UserPortfolio: useEffect triggered", { 
-      refreshTrigger, 
+    console.log("👛 UserPortfolio: useEffect triggered", {
+      refreshTrigger,
       manualTrigger,
       currentBalances: { yesBalance, noBalance, usdcBalance }
     });
@@ -83,7 +83,7 @@ export function UserPortfolio({
         const yesDecimals = yesMintInfo?.decimals ?? 9;
         const noDecimals = noMintInfo?.decimals ?? 9;
         const usdcDecimals = usdcMintInfo?.decimals ?? 6;
-        
+
         console.log("📊 Mint Decimals:", {
           yes: yesMintInfo ? `${yesDecimals} (from mint)` : `${yesDecimals} (default)`,
           no: noMintInfo ? `${noDecimals} (from mint)` : `${noDecimals} (default)`,
@@ -98,7 +98,7 @@ export function UserPortfolio({
           );
           console.log("🔍 Checking YES token account:", yesTokenAccount.toString());
           console.log("🔍 YES mint:", yesMint.toString());
-          
+
           // Check if account exists first
           const yesAccountInfo = await connection.getAccountInfo(yesTokenAccount);
           if (!yesAccountInfo) {
@@ -118,17 +118,17 @@ export function UserPortfolio({
               // Handle bigint properly - amount is a bigint from spl-token
               const rawAmount = yesAccount.amount;
               const rawAmountStr = rawAmount.toString();
-              const rawAmountNum = typeof rawAmount === 'bigint' 
-                ? Number(rawAmount) 
+              const rawAmountNum = typeof rawAmount === 'bigint'
+                ? Number(rawAmount)
                 : Number(rawAmount);
-              
+
               // Store raw amount (like Market Statistics)
               setYesRawAmount(rawAmount);
-              
+
               // Convert using the actual decimals from mint
               const divisor = Math.pow(10, yesDecimals);
               const newBalance = rawAmountNum / divisor;
-              
+
               console.log("💰 YES Balance Calculation:", {
                 rawAmount: rawAmountStr,
                 rawAmountType: typeof rawAmount,
@@ -138,13 +138,13 @@ export function UserPortfolio({
                 mint: yesMint.toString(),
                 tokenAccount: yesTokenAccount.toString()
               });
-              
+
               if (newBalance > 0) {
                 console.log("✅ YES Balance found:", newBalance);
               } else {
                 console.warn("⚠️ YES Balance is 0 (account exists but empty)");
               }
-              
+
               setYesBalance(newBalance);
             }
           }
@@ -174,7 +174,7 @@ export function UserPortfolio({
           );
           console.log("🔍 Checking NO token account:", noTokenAccount.toString());
           console.log("🔍 NO mint:", noMint.toString());
-          
+
           // Check if account exists first
           const noAccountInfo = await connection.getAccountInfo(noTokenAccount);
           if (!noAccountInfo) {
@@ -194,17 +194,17 @@ export function UserPortfolio({
               // Handle bigint properly - amount is a bigint from spl-token
               const rawAmount = noAccount.amount;
               const rawAmountStr = rawAmount.toString();
-              const rawAmountNum = typeof rawAmount === 'bigint' 
-                ? Number(rawAmount) 
+              const rawAmountNum = typeof rawAmount === 'bigint'
+                ? Number(rawAmount)
                 : Number(rawAmount);
-              
+
               // Store raw amount (like Market Statistics)
               setNoRawAmount(rawAmount);
-              
+
               // Convert using the actual decimals from mint
               const divisor = Math.pow(10, noDecimals);
               const newBalance = rawAmountNum / divisor;
-              
+
               console.log("💰 NO Balance Calculation:", {
                 rawAmount: rawAmountStr,
                 rawAmountType: typeof rawAmount,
@@ -214,13 +214,13 @@ export function UserPortfolio({
                 mint: noMint.toString(),
                 tokenAccount: noTokenAccount.toString()
               });
-              
+
               if (newBalance > 0) {
                 console.log("✅ NO Balance found:", newBalance);
               } else {
                 console.warn("⚠️ NO Balance is 0 (account exists but empty)");
               }
-              
+
               setNoBalance(newBalance);
             }
           }
@@ -251,13 +251,13 @@ export function UserPortfolio({
           const usdcAccount = await getAccount(connection, usdcTokenAccount);
           if (isMounted) {
             const rawAmount = usdcAccount.amount;
-            const rawAmountNum = typeof rawAmount === 'bigint' 
-              ? Number(rawAmount) 
+            const rawAmountNum = typeof rawAmount === 'bigint'
+              ? Number(rawAmount)
               : Number(rawAmount);
-            
+
             // Store raw amount (like Market Statistics)
             setUsdcRawAmount(rawAmount);
-            
+
             const newBalance = rawAmountNum / Math.pow(10, usdcDecimals);
             console.log("💰 USDC Balance:", newBalance, `(raw: ${rawAmount.toString()}, decimals: ${usdcDecimals})`);
             setUsdcBalance(newBalance);
@@ -277,7 +277,7 @@ export function UserPortfolio({
 
     // Fetch immediately
     fetchBalances();
-    
+
     // If refreshTrigger changed (and is > 0), also fetch after a delay to account for RPC lag
     let delayedFetchTimeout: NodeJS.Timeout | null = null;
     if (refreshTrigger !== undefined && refreshTrigger > 0) {
@@ -288,7 +288,7 @@ export function UserPortfolio({
         }
       }, 1500); // Wait 1.5 seconds for RPC to catch up
     }
-    
+
     // Set up polling interval for regular updates
     const interval = setInterval(() => {
       if (isMounted) {
@@ -305,12 +305,12 @@ export function UserPortfolio({
 
   if (loading) {
     return (
-      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
+      <div className="glass-panel rounded-2xl p-6">
         <div className="animate-pulse">
-          <div className="h-6 bg-gray-200 dark:bg-gray-700 rounded w-1/3 mb-4"></div>
+          <div className="h-6 bg-white/10 rounded w-1/3 mb-4"></div>
           <div className="space-y-2">
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
-            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded"></div>
+            <div className="h-4 bg-white/5 rounded"></div>
+            <div className="h-4 bg-white/5 rounded"></div>
           </div>
         </div>
       </div>
@@ -323,55 +323,57 @@ export function UserPortfolio({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
-          Your Portfolio
+    <div className="glass-panel rounded-2xl p-6">
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-xl font-light text-white flex items-center gap-2">
+          <span className="text-violet-400">💼</span> Your Portfolio
         </h3>
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            Refresh: {refreshTrigger || 0}
+        <div className="flex items-center gap-3">
+          <span className="text-xs text-gray-500 font-mono">
+            Ref: {refreshTrigger || 0}
           </span>
           <button
             onClick={manualRefresh}
-            className="text-xs bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded"
+            className="text-xs bg-white/5 hover:bg-white/10 text-white px-3 py-1.5 rounded-lg transition-colors border border-white/10 flex items-center gap-1"
           >
             🔄 Refresh
           </button>
         </div>
       </div>
+
       {/* Debug info - remove in production */}
-      <details className="mb-4 text-xs text-gray-500 dark:text-gray-400">
-        <summary className="cursor-pointer hover:text-gray-700 dark:hover:text-gray-300">Debug Info</summary>
-        <div className="mt-2 space-y-1 font-mono">
+      <details className="mb-6 text-xs text-gray-600">
+        <summary className="cursor-pointer hover:text-gray-400 transition-colors">Debug Info</summary>
+        <div className="mt-2 space-y-1 font-mono p-3 bg-black/40 rounded-lg border border-white/5">
           <div>YES Mint: {yesMint?.toString()}</div>
           <div>NO Mint: {noMint?.toString()}</div>
           <div>USDC Mint: {usdcMint?.toString()}</div>
           <div>User: {userPublicKey?.toString()}</div>
-          <div className="mt-2 pt-2 border-t border-gray-300 dark:border-gray-600">
-            <div className="font-semibold">Current Balances (raw):</div>
+          <div className="mt-2 pt-2 border-t border-white/10">
+            <div className="font-semibold text-gray-400">Current Balances (raw):</div>
             <div>YES: {yesBalance.toFixed(9)}</div>
             <div>NO: {noBalance.toFixed(9)}</div>
             <div>USDC: {usdcBalance.toFixed(6)}</div>
           </div>
         </div>
       </details>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-4">
-          <p className="text-sm text-green-600 dark:text-green-400">YES Tokens</p>
-          <p className="text-2xl font-bold text-green-700 dark:text-green-300">
+        <div className="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-green-500/20 transition-colors group">
+          <p className="text-xs text-green-400 uppercase tracking-wider mb-1 group-hover:text-green-300 transition-colors">YES Tokens</p>
+          <p className="text-2xl font-bold text-white group-hover:text-green-50 transition-colors">
             {Number(yesRawAmount).toLocaleString()}
           </p>
         </div>
-        <div className="bg-red-50 dark:bg-red-900/20 rounded-lg p-4">
-          <p className="text-sm text-red-600 dark:text-red-400">NO Tokens</p>
-          <p className="text-2xl font-bold text-red-700 dark:text-red-300">
+        <div className="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-red-500/20 transition-colors group">
+          <p className="text-xs text-red-400 uppercase tracking-wider mb-1 group-hover:text-red-300 transition-colors">NO Tokens</p>
+          <p className="text-2xl font-bold text-white group-hover:text-red-50 transition-colors">
             {Number(noRawAmount).toLocaleString()}
           </p>
         </div>
-        <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
-          <p className="text-sm text-blue-600 dark:text-blue-400">USDC</p>
-          <p className="text-2xl font-bold text-blue-700 dark:text-blue-300">
+        <div className="bg-black/40 border border-white/5 rounded-xl p-4 hover:border-blue-500/20 transition-colors group">
+          <p className="text-xs text-blue-400 uppercase tracking-wider mb-1 group-hover:text-blue-300 transition-colors">USDC</p>
+          <p className="text-2xl font-bold text-white group-hover:text-blue-50 transition-colors">
             {Number(usdcRawAmount).toLocaleString()}
           </p>
         </div>
