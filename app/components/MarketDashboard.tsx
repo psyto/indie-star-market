@@ -205,40 +205,69 @@ export function MarketDashboard({ marketAddress }: MarketDashboardProps) {
   return (
     <div className="space-y-8">
       {/* Market Header */}
-      <div className="glass-panel rounded-2xl p-8 relative overflow-hidden group">
+      <div className="glass-panel rounded-2xl p-8 relative overflow-hidden group border-t border-white/10">
         <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-          <div className="w-32 h-32 bg-fuchsia-500 rounded-full blur-3xl"></div>
+          <div className="w-64 h-64 bg-fuchsia-500 rounded-full blur-[100px]"></div>
         </div>
 
-        <h2 className="text-4xl font-bold text-white mb-2 tracking-tight">
-          {marketState.projectName}
-        </h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
-          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-            <p className="text-sm text-gray-400 mb-1">
-              Fundraising Goal
-            </p>
-            <p className="text-2xl font-semibold text-white tracking-tight">
-              {marketState.fundraisingGoal.toNumber().toLocaleString()} <span className="text-sm text-fuchsia-400">USDC</span>
+        <div className="flex flex-col md:flex-row justify-between items-start gap-6 relative z-10">
+          <div>
+            <div className="flex gap-2 mb-3">
+              <span className="px-2 py-0.5 rounded bg-fuchsia-500/20 border border-fuchsia-500/30 text-fuchsia-300 text-[10px] font-bold uppercase tracking-wider">
+                Trending
+              </span>
+              {!marketState.isSettled && (
+                <span className="px-2 py-0.5 rounded bg-green-500/20 border border-green-500/30 text-green-300 text-[10px] font-bold uppercase tracking-wider animate-pulse">
+                  Live
+                </span>
+              )}
+            </div>
+            <h2 className="text-4xl md:text-5xl font-bold text-white mb-2 tracking-tight">
+              {marketState.projectName}
+            </h2>
+            <p className="text-gray-400 font-light">
+              Will this project reach its fundraising goal by the deadline?
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-            <p className="text-sm text-gray-400 mb-1">
+
+          {/* Potential Return Badge */}
+          {!marketState.isSettled && (
+            <div className="bg-gradient-to-br from-fuchsia-600/20 to-violet-600/20 border border-fuchsia-500/30 p-4 rounded-xl backdrop-blur-sm">
+              <p className="text-xs text-fuchsia-200 uppercase tracking-wider mb-1">Potential Return</p>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold text-white">
+                  {yesProbability > 0 ? (100 / yesProbability).toFixed(2) : "0.00"}x
+                </span>
+                <span className="text-xs text-fuchsia-300">on YES</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
+              Fundraising Goal
+            </p>
+            <p className="text-2xl font-semibold text-white tracking-tight font-mono">
+              ${marketState.fundraisingGoal.toNumber().toLocaleString()}
+            </p>
+          </div>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">
               Time Remaining
             </p>
-            <p className="text-2xl font-semibold text-white tracking-tight">
+            <p className="text-2xl font-semibold text-white tracking-tight font-mono">
               {timeRemaining > 0
                 ? `${daysRemaining}d ${hoursRemaining}h`
                 : "Ended"}
             </p>
           </div>
-          <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-            <p className="text-sm text-gray-400 mb-1">Status</p>
+          <div className="p-4 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 transition-colors">
+            <p className="text-xs text-gray-500 uppercase tracking-wider mb-1">Volume</p>
             <div className="flex items-center gap-2">
-              <span className={`w-2 h-2 rounded-full ${marketState.isSettled ? 'bg-gray-500' : 'bg-green-500 animate-pulse'}`}></span>
-              <p className="text-2xl font-semibold text-white tracking-tight">
-                {marketState.isSettled ? "Settled" : "Active"}
+              <p className="text-2xl font-semibold text-white tracking-tight font-mono">
+                ${(yesLiquidity + noLiquidity).toLocaleString()}
               </p>
             </div>
           </div>

@@ -374,8 +374,8 @@ export function TradingPanelEnhanced({
         <button
           onClick={() => setAction("buy")}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "buy"
-              ? "bg-white/10 text-white shadow-lg"
-              : "text-gray-400 hover:text-white"
+            ? "bg-white/10 text-white shadow-lg"
+            : "text-gray-400 hover:text-white"
             }`}
         >
           Buy
@@ -383,8 +383,8 @@ export function TradingPanelEnhanced({
         <button
           onClick={() => setAction("sell")}
           className={`flex-1 py-3 px-4 rounded-lg font-medium transition-all ${action === "sell"
-              ? "bg-white/10 text-white shadow-lg"
-              : "text-gray-400 hover:text-white"
+            ? "bg-white/10 text-white shadow-lg"
+            : "text-gray-400 hover:text-white"
             }`}
         >
           Sell
@@ -396,8 +396,8 @@ export function TradingPanelEnhanced({
         <button
           onClick={() => setOutcome("yes")}
           className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "yes"
-              ? "bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]"
-              : "bg-black/40 border-white/5 text-gray-400 hover:border-green-500/50"
+            ? "bg-green-500/20 border-green-500 text-green-400 shadow-[0_0_20px_rgba(34,197,94,0.2)]"
+            : "bg-black/40 border-white/5 text-gray-400 hover:border-green-500/50"
             }`}
         >
           YES
@@ -405,8 +405,8 @@ export function TradingPanelEnhanced({
         <button
           onClick={() => setOutcome("no")}
           className={`flex-1 py-4 px-4 rounded-xl font-medium transition-all border ${outcome === "no"
-              ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
-              : "bg-black/40 border-white/5 text-gray-400 hover:border-red-500/50"
+            ? "bg-red-500/20 border-red-500 text-red-400 shadow-[0_0_20px_rgba(239,68,68,0.2)]"
+            : "bg-black/40 border-white/5 text-gray-400 hover:border-red-500/50"
             }`}
         >
           NO
@@ -434,15 +434,34 @@ export function TradingPanelEnhanced({
         </div>
       </div>
 
-      {/* Price Preview */}
+      {/* Price Preview & Simulation */}
       {preview && (
-        <div className="mb-6 p-4 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-xl">
-          <p className="text-sm font-medium text-fuchsia-300 mb-1 flex items-center gap-2">
-            <span>📊</span> Price Preview
-          </p>
-          <p className="text-sm text-fuchsia-100/80">
-            {preview}
-          </p>
+        <div className="mb-6 space-y-3">
+          <div className="p-4 bg-white/5 border border-white/10 rounded-xl">
+            <div className="flex justify-between items-center mb-2">
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Est. Output</span>
+              <span className="text-sm font-mono text-white">{preview.split('(')[0].replace('You will receive', '')}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-gray-400 uppercase tracking-wider">Avg. Price</span>
+              <span className="text-sm font-mono text-fuchsia-300">{preview.split('(')[1]?.replace(')', '') || '-'}</span>
+            </div>
+          </div>
+
+          {/* Profit Simulation */}
+          {action === 'buy' && amount && parseFloat(amount) > 0 && (
+            <div className="p-4 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
+              <div className="flex justify-between items-center mb-1">
+                <span className="text-xs text-green-400 uppercase tracking-wider font-bold">If Outcome Occurs</span>
+                <span className="text-lg font-bold text-green-300 font-mono">
+                  +${(parseFloat(amount) * (outcome === 'yes' ? (100 / (marketData?.yesLiquidity ? (marketData.yesLiquidity.toNumber() / (marketData.yesLiquidity.toNumber() + marketData.noLiquidity.toNumber()) * 100) : 50)) : (100 / (100 - (marketData?.yesLiquidity ? (marketData.yesLiquidity.toNumber() / (marketData.yesLiquidity.toNumber() + marketData.noLiquidity.toNumber()) * 100) : 50))))).toFixed(2)}
+                </span>
+              </div>
+              <p className="text-[10px] text-green-400/60 text-right">
+                Includes initial investment
+              </p>
+            </div>
+          )}
         </div>
       )}
 
@@ -451,8 +470,8 @@ export function TradingPanelEnhanced({
         onClick={handleTrade}
         disabled={loading || !publicKey || !amount || parseFloat(amount) <= 0}
         className={`w-full py-4 px-6 rounded-xl font-medium transition-all shadow-lg ${loading || !publicKey || !amount || parseFloat(amount) <= 0
-            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
-            : "bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white shadow-fuchsia-900/20"
+          ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+          : "bg-gradient-to-r from-fuchsia-600 to-violet-600 hover:from-fuchsia-500 hover:to-violet-500 text-white shadow-fuchsia-900/20"
           }`}
       >
         {loading ? "Processing..." : `${action === "buy" ? "Buy" : "Sell"} ${outcome.toUpperCase()} Tokens`}
@@ -461,10 +480,10 @@ export function TradingPanelEnhanced({
       {/* Status Message */}
       {status && (
         <div className={`mt-6 p-4 rounded-xl border ${status.includes("✅")
-            ? "bg-green-500/10 border-green-500/20 text-green-300"
-            : status.includes("❌")
-              ? "bg-red-500/10 border-red-500/20 text-red-300"
-              : "bg-blue-500/10 border-blue-500/20 text-blue-300"
+          ? "bg-green-500/10 border-green-500/20 text-green-300"
+          : status.includes("❌")
+            ? "bg-red-500/10 border-red-500/20 text-red-300"
+            : "bg-blue-500/10 border-blue-500/20 text-blue-300"
           }`}>
           <p className="text-sm font-mono">
             {status}
