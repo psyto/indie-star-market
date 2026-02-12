@@ -32,7 +32,10 @@ async function mintUsdcToUser() {
   console.log("USDC Mint:", usdcMint.toString());
 
   // Connect to local validator
-  const connection = new anchor.web3.Connection("http://127.0.0.1:8899", "confirmed");
+  const connection = new anchor.web3.Connection(
+    process.env.ANCHOR_PROVIDER_URL ?? "http://127.0.0.1:8899",
+    "confirmed",
+  );
 
   // Load local wallet (authority)
   const keypairPath = `${os.homedir()}/.config/solana/id.json`;
