@@ -342,7 +342,7 @@ pub mod indie_star_market {
             ErrorCode::MarketNotSettled
         );
 
-        let winning_outcome = market.winning_outcome.unwrap();
+        let winning_outcome = market.winning_outcome.ok_or(ErrorCode::MarketNotSettled)?;
         let (mint, _) = match winning_outcome {
             Outcome::Yes => (&ctx.accounts.yes_mint, &ctx.accounts.no_mint),
             Outcome::No => (&ctx.accounts.no_mint, &ctx.accounts.yes_mint),
