@@ -459,12 +459,12 @@ pub struct BuyTokens<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's YES mint
+    #[account(mut, address = market.yes_mint @ ErrorCode::WrongTokenType)]
     pub yes_mint: AccountInfo<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's NO mint
+    #[account(mut, address = market.no_mint @ ErrorCode::WrongTokenType)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]
@@ -505,12 +505,12 @@ pub struct SellTokens<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's YES mint
+    #[account(mut, address = market.yes_mint @ ErrorCode::WrongTokenType)]
     pub yes_mint: AccountInfo<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's NO mint
+    #[account(mut, address = market.no_mint @ ErrorCode::WrongTokenType)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]
@@ -562,12 +562,12 @@ pub struct RedeemTokens<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's YES mint
+    #[account(mut, address = market.yes_mint @ ErrorCode::WrongTokenType)]
     pub yes_mint: AccountInfo<'info>,
 
-    /// CHECK: Validated in instruction
-    #[account(mut)]
+    /// CHECK: Must be the market's NO mint
+    #[account(mut, address = market.no_mint @ ErrorCode::WrongTokenType)]
     pub no_mint: AccountInfo<'info>,
 
     #[account(mut)]
